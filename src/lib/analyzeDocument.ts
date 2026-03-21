@@ -10,7 +10,7 @@ Antes de ler valores, identifique a instituição pela aparência:
 - IBKR: cor vermelha/branca, "Interactive Brokers", "IBKR", interface de trading
 - BINANCE: cor amarela/preta, fundo escuro #181A20, "Visão Geral", tabs "Earn/Spot/Fundos", "Criptomoeda/Conta", botão amarelo "Adicionar fundos", nav "Início/Mercados/Trade/Descubra/Ativos", valores em USDT, botões "Earn" e "TRADE" por ativo
 - SABB: logo SABB, "Saudi British Bank", texto em árabe, valores em SAR
-- KAUST: logo KAUST, "King Abdullah University", portal de benefícios
+- KAUST: fundo cinza claro, interface web, headers azuis "Global Employee Savings Plan" e/ou "Global Employee Pension Plan", botões "Details"/"Rate of Return"/"Withdrawal"/"Risk Tolerance"/"Termination Request", tabela "Fund Name / Amount / Rate of Return", fundos Vanguard, setas verdes nos retornos
 
 PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
 - BANCO DO BRASIL: "Fundo de Ações Vale I", "LCI BB", "Ações Vale", "BB Ações", "Poupança BB"
@@ -19,8 +19,8 @@ PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
 - IBKR: "VTI", "VXUS", "BND", "VNQ", "GLD", ETFs americanos, valores em USD
 - BINANCE: "BTC" (Bitcoin), "ETH" (Ethereum), "USDT" (TetherUS), "BNB", "SOL" (Solana), "ADA" (Cardano), "DOT" (Polkadot), "RLC" (iExecRLC), "FET" (Fetch.ai), "ONDO" (Ondo Finance), valores em USDT, PNL em verde/vermelho
 - SABB: "Commodity Investment Account", fundo SAR
-- KAUST Savings: "Savings Plan", "Employee Savings"
-- KAUST Pension: "Pension Plan", "Retirement Plan"
+- KAUST Savings: "Global Employee Savings Plan", "Savings Plan", fundos "Vanguard Emerging Markets Stock Index Fund Inst", "Vanguard U.S. Opportunities Fund Inst", "Vanguard U.S. 500 Stock Index Fund Inst"
+- KAUST Pension: "Global Employee Pension Plan", "Pension Plan", "Vanguard Pension Trust Cash Account"
 
 PASSO 3 — EXTRAIR VALORES:
 Extraia CADA ATIVO INDIVIDUAL com seu valor. Para Binance/cripto, liste cada moeda separadamente.
@@ -40,17 +40,23 @@ MAPEAMENTO FONTE → CAMPO:
 
 IMPORTANTE: Banco do Brasil NÃO é Nubank. BB é amarelo/azul, Nubank é roxo.
 
+CASO ESPECIAL — MÚLTIPLOS CAMPOS NO MESMO PRINT:
+Se o print mostrar Savings E Pension juntos (KAUST portal), use campo "kaust_ambos" e inclua ambos nos valores.
+Se o print mostrar múltiplas contas do mesmo banco, some tudo no valor_principal.
+
 Retorne APENAS um JSON válido:
 {
   "fonte": "nome exato da instituição",
-  "campo": "campo do sistema",
-  "valores": [{"descricao": "nome do ativo", "valor": 12345.67, "moeda": "USDT"}],
+  "campo": "campo do sistema (ou kaust_ambos se Savings+Pension juntos)",
+  "valores": [{"descricao": "nome do ativo/conta", "valor": 12345.67, "moeda": "USD"}],
   "valor_principal": 12345.67,
-  "moeda": "USDT",
+  "moeda": "USD",
+  "campos_extras": {"savings_usd": 45661.43, "pension_usd": 20196.46},
   "data_ref": "2026-03-15 ou null",
   "confianca": "alta/media/baixa",
-  "observacao": "elementos visuais usados na identificação"
-}`
+  "observacao": "elementos visuais usados"
+}
+O campo "campos_extras" é opcional — use quando houver mais de um campo para preencher.`
 
 export interface AnalysisResult {
   fonte: string
@@ -58,6 +64,7 @@ export interface AnalysisResult {
   valores: Array<{ descricao: string; valor: number; moeda: string }>
   valor_principal: number
   moeda: string
+  campos_extras?: Record<string, number>
   data_ref: string | null
   confianca: string
   observacao: string

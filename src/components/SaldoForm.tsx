@@ -91,8 +91,23 @@ export default function SaldoForm({ theme, analysis, onSaved }: Props) {
     // Auto-select institution
     if (analysis.campo && analysis.campo !== 'desconhecido' && analysis.campo !== 'capex') {
       const mappedInst = CAMPO_TO_INST[analysis.campo]
-      if (mappedInst) setInst(mappedInst)
-      setValues(prev => ({ ...prev, [analysis.campo]: String(analysis.valor_principal) }))
+      // KAUST ambos → show all fields
+      if (analysis.campo === 'kaust_ambos') {
+        setInst('outro')
+      } else if (mappedInst) {
+        setInst(mappedInst)
+      }
+
+      const newVals: Record<string, string> = {}
+      // Fill from campos_extras if available (e.g. savings + pension together)
+      if (analysis.campos_extras) {
+        for (const [k, v] of Object.entries(analysis.campos_extras)) {
+          newVals[k] = String(v)
+        }
+      } else {
+        newVals[analysis.campo] = String(analysis.valor_principal)
+      }
+      setValues(prev => ({ ...prev, ...newVals }))
     }
 
     // Auto-fill date
