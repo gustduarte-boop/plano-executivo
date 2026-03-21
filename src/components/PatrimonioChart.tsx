@@ -36,7 +36,7 @@ interface Props {
   onHover?: (point: HoverPoint | null) => void
 }
 
-// Custom bar shape: solid narrow bar (1/3 width), centered on top of projection
+// Custom bar shape: translucent fill + solid outline in asset color
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function NarrowBar(props: any) {
   const { x, y, width, height, fill } = props
@@ -44,7 +44,7 @@ function NarrowBar(props: any) {
   const w = width / 3
   const xOff = x + (width - w) / 2
   return (
-    <rect x={xOff} y={y} width={w} height={height} fill={fill} fillOpacity={0.95} stroke="#000" strokeWidth={0.5} strokeOpacity={0.3} rx={1} />
+    <rect x={xOff} y={y} width={w} height={height} fill={fill} fillOpacity={0.25} stroke={fill} strokeWidth={2} rx={1} />
   )
 }
 
