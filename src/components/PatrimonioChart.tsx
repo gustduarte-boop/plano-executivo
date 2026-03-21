@@ -166,7 +166,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
           margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
           onMouseMove={handleChartEvent}
           barGap={-100}
-          barCategoryGap="15%"
+          barCategoryGap="25%"
         >
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
