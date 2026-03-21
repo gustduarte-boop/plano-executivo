@@ -20,7 +20,6 @@ const LABELS: Record<string, string> = {
 }
 
 const STACK_ORDER = ['cdi', 'lci', 'cripto', 'im2', 'im1', 'fundo_sar', 'pension', 'savings', 'ibkr']
-const MONTHS_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 export interface HoverPoint {
   mes: string
@@ -35,23 +34,6 @@ interface Props {
   titulo: string
   theme: Theme
   onHover?: (point: HoverPoint | null) => void
-}
-
-function saldoToCumulative(s: SaldoReal, showReal: boolean): Record<string, number | undefined> {
-  if (!showReal) return {}
-  let cum = 0
-  const r: Record<string, number> = {}
-  cum += s.cdi;       r.rc_cdi = cum
-  cum += s.lci;       r.rc_lci = cum
-  cum += s.cripto;    r.rc_cripto = cum
-  cum += s.im2;       r.rc_im2 = cum
-  cum += s.im1;       r.rc_im1 = cum
-  cum += s.fundo_sar; r.rc_fundo_sar = cum
-  cum += s.pension;   r.rc_pension = cum
-  cum += s.savings;   r.rc_savings = cum
-  cum += s.ibkr;      r.rc_ibkr = cum
-  r.real_total = s.total
-  return r
 }
 
 export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHover }: Props) {
@@ -72,39 +54,34 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     )
   }
 
-  // Build merged dataset: projected quarterly points + monthly real points inserted between
-  const projDates = new Set(data.map(d => d.data_ref))
-  const merged: Record<string, unknown>[] = []
-
-  for (const d of data) {
-    // Add projected point
-    merged.push({ ...d })
-  }
-
-  // Insert real saldo points that DON'T coincide with projected dates
-  if (showReal) {
+  // Match each projected point to nearest real saldo (within 62 days)
+  // Real data added as cumulative lines on the same projected points
+  const merged = data.map((d) => {
+    const dDate = new Date(d.data_ref).getTime()
+    let closest: SaldoReal | undefined
+    let minDist = Infinity
     for (const s of saldosReais) {
-      if (projDates.has(s.data_ref)) {
-        // Coincides with projected point — add real data to it
-        const existing = merged.find(p => (p as { data_ref: string }).data_ref === s.data_ref)
-        if (existing) Object.assign(existing, saldoToCumulative(s, true))
-      } else {
-        // Insert as new point — only real lines, no bars
-        const [ano, mes] = s.data_ref.split('-')
-        const label = `${MONTHS_PT[parseInt(mes) - 1]}/${ano}`
-        const point: Record<string, unknown> = {
-          mes: label,
-          data_ref: s.data_ref,
-          // No bar data (all zeros/undefined)
-          ...saldoToCumulative(s, true),
-        }
-        merged.push(point)
-      }
+      const dist = Math.abs(new Date(s.data_ref).getTime() - dDate)
+      if (dist < minDist) { minDist = dist; closest = s }
     }
-  }
+    const hasMatch = closest && minDist < 62 * 86400000
 
-  // Sort by data_ref
-  merged.sort((a, b) => String(a.data_ref).localeCompare(String(b.data_ref)))
+    const point: Record<string, unknown> = { ...d }
+    if (hasMatch && closest && showReal) {
+      let cum = 0
+      cum += closest.cdi;       point.rc_cdi = cum
+      cum += closest.lci;       point.rc_lci = cum
+      cum += closest.cripto;    point.rc_cripto = cum
+      cum += closest.im2;       point.rc_im2 = cum
+      cum += closest.im1;       point.rc_im1 = cum
+      cum += closest.fundo_sar; point.rc_fundo_sar = cum
+      cum += closest.pension;   point.rc_pension = cum
+      cum += closest.savings;   point.rc_savings = cum
+      cum += closest.ibkr;      point.rc_ibkr = cum
+      point.real_total = closest.total
+    }
+    return point
+  })
 
   const hasReal = merged.some((d) => d.real_total !== undefined)
 
@@ -118,7 +95,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     if (idx == null || idx === lastIndexRef.current) return
     lastIndexRef.current = idx
     const d = merged[idx] as ChartDataPoint
-    if (!d || !d.total) return
+    if (!d) return
     const liq = (d.ibkr + d.savings + d.pension + d.cdi + d.lci + d.fundo_sar + d.cripto + (d.ouro || 0)) * 1e6
     const iliq = (d.im1 + d.im2) * 1e6
     onHover({ mes: d.mes, liquido: liq, iliquido: iliq, total: liq + iliq })
@@ -169,9 +146,9 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
           ))}
 
           {/* Linha total projetado */}
-          <Line type="monotone" dataKey="total" name="Projetado" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} connectNulls />
+          <Line type="monotone" dataKey="total" name="Projetado" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} />
 
-          {/* Real — linhas com pontos pequenos por ativo */}
+          {/* Real — linhas acumuladas por ativo */}
           {hasReal && STACK_ORDER.map((key) => (
             <Line
               key={`rc_${key}`}
@@ -179,7 +156,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
               dataKey={`rc_${key}`}
               stroke={COLORS[key]}
               strokeWidth={1.5}
-              dot={{ r: 1.5, fill: COLORS[key], strokeWidth: 0.5, stroke: theme.isDark ? '#000' : '#fff' }}
+              dot={{ r: 1.5, fill: COLORS[key], strokeWidth: 0 }}
               connectNulls={false}
               legendType="none"
             />
