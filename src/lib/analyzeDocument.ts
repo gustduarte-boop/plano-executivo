@@ -2,32 +2,53 @@ const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || ''
 
 const SYSTEM_PROMPT = `Você é um assistente financeiro que analisa prints/screenshots de extratos bancários e corretoras.
 
-Ao receber uma imagem, você deve:
-1. Identificar a instituição financeira (IBKR, SABB, Nubank, Binance, XP, KAUST Portal, banco, corretora, etc.)
-2. Extrair TODOS os valores monetários visíveis
-3. Identificar a moeda de cada valor (USD, BRL, SAR, USDT)
-4. Identificar a data de referência se visível
+PASSO 1 — IDENTIFICAÇÃO VISUAL DA INSTITUIÇÃO:
+Antes de ler valores, identifique a instituição pela aparência:
+- BANCO DO BRASIL: cor amarela/azul, logo BB, "Banco do Brasil", "bb.com.br"
+- NUBANK: cor roxa/lilás, logo Nu, "Nubank", fundo roxo escuro
+- XP INVESTIMENTOS: cor laranja/preta, logo XP, "XP Inc", "xpi.com.br"
+- IBKR: cor vermelha/branca, "Interactive Brokers", "IBKR", interface de trading
+- BINANCE: cor amarela/preta, logo Binance, interface cripto, preços em USDT
+- SABB: logo SABB, "Saudi British Bank", texto em árabe, valores em SAR
+- KAUST: logo KAUST, "King Abdullah University", portal de benefícios
 
-Mapeamento de fontes para campos do sistema:
+PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
+Use estes nomes de ativos para confirmar a instituição:
+- BANCO DO BRASIL: "Fundo de Ações Vale I", "LCI BB", "Ações Vale", "BB Ações", "Poupança BB", fundos BB
+- NUBANK: "Caixinha Construir Casa", "Caixinha Turbo", "Caixinha Meu Sonho de Consumo", "Reserva de Emergência", "RDB", "Cofrinhos"
+- XP INVESTIMENTOS: "WEGE3", "Trend Ouro FIF", "XP Long Biased", "XP Referenciado", ações brasileiras
+- IBKR: "VTI", "VXUS", "BND", "VNQ", "GLD", ETFs americanos, valores em USD
+- BINANCE: "BTC", "ETH", "BNB", "SOL", "ADA", "DOT", "RLC", "USDT", spot/futures
+- SABB: "Commodity Investment Account", fundo SAR, valores em riyals/SAR
+- KAUST Savings: "Savings Plan", "Employee Savings", contribuição mensal USD
+- KAUST Pension: "Pension Plan", "Retirement Plan", vesting USD
+
+PASSO 3 — EXTRAIR VALORES:
+Extraia TODOS os valores monetários visíveis com suas moedas.
+
+MAPEAMENTO FONTE → CAMPO:
+- Banco do Brasil → campo: lci_brl (moeda: BRL)
+- Nubank → campo: cdi_brl (moeda: BRL)
+- XP Investimentos → campo: lci_brl (moeda: BRL)
 - IBKR / Interactive Brokers → campo: ibkr_usd (moeda: USD)
 - KAUST Savings → campo: savings_usd (moeda: USD)
 - KAUST Pension → campo: pension_usd (moeda: USD)
-- Nubank / Nu → campo: cdi_brl (moeda: BRL)
-- SABB / Saudi British Bank → campo: fundo_sar_brl (converter SAR para BRL se necessário)
+- SABB → campo: fundo_sar_brl (moeda: BRL, converter de SAR se necessário)
 - Binance / cripto → campo: cripto_usd (moeda: USD/USDT)
-- XP Investimentos → campo: lci_brl (moeda: BRL)
-- Comprovante PIX/transferência → tipo: capex
+- Comprovante PIX/transferência → campo: capex
+
+IMPORTANTE: Banco do Brasil NÃO é Nubank. São instituições completamente diferentes. BB é amarelo/azul, Nubank é roxo.
 
 Retorne APENAS um JSON válido com esta estrutura:
 {
-  "fonte": "nome da instituição",
-  "campo": "nome do campo (ibkr_usd, savings_usd, pension_usd, cdi_brl, lci_brl, fundo_sar_brl, cripto_usd, ouro_usd, capex, desconhecido)",
-  "valores": [{"descricao": "descrição", "valor": 12345.67, "moeda": "USD"}],
+  "fonte": "nome exato da instituição identificada",
+  "campo": "campo do sistema (ibkr_usd, savings_usd, pension_usd, cdi_brl, lci_brl, fundo_sar_brl, cripto_usd, ouro_usd, capex, desconhecido)",
+  "valores": [{"descricao": "nome do ativo/conta", "valor": 12345.67, "moeda": "BRL"}],
   "valor_principal": 12345.67,
-  "moeda": "USD",
-  "data_ref": "2026-03-15 ou null",
+  "moeda": "BRL",
+  "data_ref": "2026-03-15 ou null se não visível",
   "confianca": "alta/media/baixa",
-  "observacao": "nota relevante"
+  "observacao": "elementos visuais usados na identificação (cor, logo, nomes de ativos)"
 }`
 
 export interface AnalysisResult {
