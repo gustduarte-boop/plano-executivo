@@ -115,6 +115,44 @@ export function useAllCenarios(plano: Plano) {
   return { data, loading }
 }
 
+export function usePatrimonioFull(plano: Plano, cenario: Cenario) {
+  const [data, setData] = useState<ChartDataPoint[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    supabase
+      .from('patrimonio_calculado')
+      .select('*')
+      .eq('plano', plano)
+      .eq('cenario', cenario)
+      .order('data_ref')
+      .then(({ data: rows, error }) => {
+        if (error || !rows) { setData([]); setLoading(false); return }
+        const points: ChartDataPoint[] = (rows as PatrimonioCalculado[]).map((r) => ({
+          mes: dataRefToLabel(r.data_ref),
+          data_ref: r.data_ref,
+          ibkr: r.ibkr_brl / 1e6,
+          savings: r.savings_brl / 1e6,
+          pension: r.pension_brl / 1e6,
+          cdi: r.cdi_brl / 1e6,
+          lci: r.lci_brl / 1e6,
+          fundo_sar: r.fundo_sar_brl / 1e6,
+          im1: r.im1_brl / 1e6,
+          im2: r.im2_brl / 1e6,
+          cripto: r.cripto_brl / 1e6,
+          ouro: r.ouro_brl / 1e6,
+          total: r.patrimonio_total_brl / 1e6,
+          renda: r.renda_passiva_brl,
+        }))
+        setData(points)
+        setLoading(false)
+      })
+  }, [plano, cenario])
+
+  return { data, loading }
+}
+
 export function useSaldosReais() {
   const [data, setData] = useState<SaldoReal[]>([])
 

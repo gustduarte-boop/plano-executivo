@@ -9,10 +9,16 @@ import CoberturaChart from '../components/CoberturaChart'
 import SensibilidadeHeatmap from '../components/SensibilidadeHeatmap'
 import SinteseTable from '../components/SinteseTable'
 import ComparativoTable from '../components/ComparativoTable'
+import Im1Benchmark from '../components/Im1Benchmark'
+import Im2Maturacao from '../components/Im2Maturacao'
+import NotaMetodologica from '../components/NotaMetodologica'
+import PremissasTable from '../components/PremissasTable'
+import FotografiaPatrimonial from '../components/FotografiaPatrimonial'
+import TabelaPatrimonial from '../components/TabelaPatrimonial'
 import SectionCarousel from '../components/SectionCarousel'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
-import { usePatrimonio, useAllCenarios, useSaldosReais } from '../hooks/usePatrimonio'
+import { usePatrimonio, useAllCenarios, useSaldosReais, usePatrimonioFull } from '../hooks/usePatrimonio'
 import type { Plano, Cenario } from '../types/database'
 
 const MARCOS = [
@@ -45,44 +51,34 @@ export default function Dashboard() {
   const [plano, setPlano] = useState<Plano>('master')
   const [cenario, setCenario] = useState<Cenario>('base')
   const theme = useTheme(plano)
-
-  const { data: chartData, loading } = usePatrimonio(plano, cenario)
-  const { data: allCenarios } = useAllCenarios(plano)
-  const saldosReais = useSaldosReais()
-
   const [hoverPoint, setHoverPoint] = useState<HoverPoint | null>(null)
   const onChartHover = useCallback((p: HoverPoint | null) => setHoverPoint(p), [])
 
-  const lastPoint = chartData[chartData.length - 1]
+  const { data: chartData, loading } = usePatrimonio(plano, cenario)
+  const { data: fullData } = usePatrimonioFull(plano, cenario)
+  const { data: allCenarios } = useAllCenarios(plano)
+  const saldosReais = useSaldosReais()
 
+  const lastPoint = chartData[chartData.length - 1]
   const defaultLiq = lastPoint
     ? (lastPoint.ibkr + lastPoint.savings + lastPoint.pension + lastPoint.cdi +
-       lastPoint.lci + lastPoint.fundo_sar + lastPoint.cripto + lastPoint.ouro) * 1e6
-    : 0
+       lastPoint.lci + lastPoint.fundo_sar + lastPoint.cripto + lastPoint.ouro) * 1e6 : 0
   const defaultIliq = lastPoint ? (lastPoint.im1 + lastPoint.im2) * 1e6 : 0
-
   const patLiquido = hoverPoint ? hoverPoint.liquido : defaultLiq
   const patIliquido = hoverPoint ? hoverPoint.iliquido : defaultIliq
   const patTotal = patLiquido + patIliquido
   const refLabel = hoverPoint ? hoverPoint.mes : 'Dez/2032'
 
   const cenariosDisponiveis = plano === 'terceira_margem'
-    ? CENARIOS.filter((c) => c.key !== 'ultra')
-    : CENARIOS
-
+    ? CENARIOS.filter((c) => c.key !== 'ultra') : CENARIOS
   const planoLabel = PLANOS.find((p) => p.key === plano)?.label || plano
   const cenarioLabel = CENARIOS.find((c) => c.key === cenario)?.label || cenario
 
   return (
     <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: theme.bg }}>
-      {/* ── HEADER FIXO ── */}
-      <header
-        className="sticky top-0 z-20 backdrop-blur-md transition-colors duration-300"
-        style={{
-          backgroundColor: theme.isDark ? 'rgba(10,10,15,0.85)' : 'rgba(255,255,255,0.85)',
-          borderBottom: `1px solid ${theme.surfaceBorder}`,
-        }}
-      >
+      {/* ── HEADER ── */}
+      <header className="sticky top-0 z-20 backdrop-blur-md transition-colors duration-300"
+        style={{ backgroundColor: theme.isDark ? 'rgba(10,10,15,0.85)' : 'rgba(255,255,255,0.85)', borderBottom: `1px solid ${theme.surfaceBorder}` }}>
         <div className="max-w-6xl mx-auto px-4 py-2">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -91,41 +87,25 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: theme.textFaint }}>{user?.email}</span>
-              <button onClick={signOut} className="p-1 rounded transition-colors" style={{ color: theme.textFaint }} title="Sair">
-                <LogOut size={14} />
-              </button>
+              <button onClick={signOut} className="p-1 rounded" style={{ color: theme.textFaint }} title="Sair"><LogOut size={14} /></button>
             </div>
           </div>
-
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex gap-0.5 rounded-lg p-0.5" style={{ backgroundColor: theme.isDark ? theme.surface : theme.bgAlt, border: `1px solid ${theme.surfaceBorder}` }}>
               {PLANOS.map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => { setPlano(p.key); if (p.key === 'terceira_margem' && cenario === 'ultra') setCenario('pessim') }}
+                <button key={p.key} onClick={() => { setPlano(p.key); if (p.key === 'terceira_margem' && cenario === 'ultra') setCenario('pessim') }}
                   className="px-3 py-1 rounded-md text-xs font-semibold transition-all duration-200"
-                  style={{ backgroundColor: plano === p.key ? theme.accent : 'transparent', color: plano === p.key ? theme.textInverse : theme.textMuted }}
-                >
-                  {p.short}
-                </button>
+                  style={{ backgroundColor: plano === p.key ? theme.accent : 'transparent', color: plano === p.key ? theme.textInverse : theme.textMuted }}>{p.short}</button>
               ))}
             </div>
-
             <div className="flex gap-0.5 rounded-lg p-0.5" style={{ backgroundColor: theme.isDark ? theme.surface : theme.bgAlt, border: `1px solid ${theme.surfaceBorder}` }}>
               {cenariosDisponiveis.map((c) => (
-                <button
-                  key={c.key}
-                  onClick={() => setCenario(c.key)}
+                <button key={c.key} onClick={() => setCenario(c.key)}
                   className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200"
-                  style={{ backgroundColor: cenario === c.key ? theme.accentBg : 'transparent', color: cenario === c.key ? theme.accent : theme.textFaint, border: cenario === c.key ? `1px solid ${theme.accentBorder}` : '1px solid transparent' }}
-                >
-                  {c.short}
-                </button>
+                  style={{ backgroundColor: cenario === c.key ? theme.accentBg : 'transparent', color: cenario === c.key ? theme.accent : theme.textFaint, border: cenario === c.key ? `1px solid ${theme.accentBorder}` : '1px solid transparent' }}>{c.short}</button>
               ))}
             </div>
-
             <div className="flex-1" />
-
             <div className="rounded-lg px-3 py-1.5 min-w-[120px] text-center" style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}>
               <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Total {refLabel}</div>
               <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>{loading ? '...' : fmt(patTotal)}</div>
@@ -146,42 +126,40 @@ export default function Dashboard() {
       <main className="max-w-6xl mx-auto px-4 py-5 space-y-5">
         {/* Countdown */}
         <section>
-          <h2 className="text-[10px] font-medium uppercase tracking-widest mb-2" style={{ color: theme.textFaint }}>
-            Countdown — Saída KAUST
-          </h2>
+          <h2 className="text-[10px] font-medium uppercase tracking-widest mb-2" style={{ color: theme.textFaint }}>Countdown — Saída KAUST</h2>
           <div className="grid grid-cols-3 gap-2">
-            {MARCOS.map((m) => (
-              <CountdownCard key={m.plano} plano={m.plano} dataAlvo={m.data} cor={m.cor} theme={theme} />
-            ))}
+            {MARCOS.map((m) => (<CountdownCard key={m.plano} plano={m.plano} dataAlvo={m.data} cor={m.cor} theme={theme} />))}
           </div>
         </section>
 
-        {/* Gráficos */}
-        <SectionCarousel
-          labels={['Evolução', 'LCI/RF', 'Valorização', 'Comparativo', 'Cobertura', 'Sensibilidade']}
-          theme={theme}
-        >
-          <PatrimonioChart
-            data={chartData}
-            saldosReais={saldosReais}
-            titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`}
-            theme={theme}
-            onHover={onChartHover}
-          />
+        {/* Nota Metodológica + Premissas + Fotografia */}
+        <SectionCarousel labels={['Nota Metodológica', 'Premissas', 'Fotografia']} theme={theme}>
+          <NotaMetodologica theme={theme} />
+          <PremissasTable theme={theme} />
+          <FotografiaPatrimonial theme={theme} />
+        </SectionCarousel>
+
+        {/* Gráficos principais */}
+        <SectionCarousel labels={['Evolução', 'LCI/RF', 'Valorização', 'Comparativo', 'Cobertura']} theme={theme}>
+          <PatrimonioChart data={chartData} saldosReais={saldosReais} titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`} theme={theme} onHover={onChartHover} />
           <LciChart data={allCenarios} cenarioAtivo={cenario} theme={theme} />
           <ValorizacaoChart baseData={chartData} plano={plano} theme={theme} />
           <ComparativoChart cenario={cenario} theme={theme} />
           <CoberturaChart data={chartData} plano={plano} theme={theme} />
+        </SectionCarousel>
+
+        {/* Imóveis */}
+        <SectionCarousel labels={['Im.1 Benchmark', 'Im.2 Maturação', 'Sensibilidade']} theme={theme}>
+          <Im1Benchmark theme={theme} />
+          <Im2Maturacao plano={plano} theme={theme} />
           <SensibilidadeHeatmap plano={plano} theme={theme} />
         </SectionCarousel>
 
         {/* Tabelas */}
-        <SectionCarousel
-          labels={['Síntese', 'Comparativo']}
-          theme={theme}
-        >
+        <SectionCarousel labels={['Síntese', 'Comparativo', 'Patrimonial 84m']} theme={theme}>
           <SinteseTable theme={theme} />
           <ComparativoTable cenario={cenario} theme={theme} />
+          <TabelaPatrimonial data={fullData} theme={theme} />
         </SectionCarousel>
       </main>
     </div>
