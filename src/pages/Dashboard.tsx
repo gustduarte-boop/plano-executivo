@@ -4,6 +4,11 @@ import CountdownCard from '../components/CountdownCard'
 import PatrimonioChart from '../components/PatrimonioChart'
 import ValorizacaoChart from '../components/ValorizacaoChart'
 import LciChart from '../components/LciChart'
+import ComparativoChart from '../components/ComparativoChart'
+import CoberturaChart from '../components/CoberturaChart'
+import SensibilidadeHeatmap from '../components/SensibilidadeHeatmap'
+import SinteseTable from '../components/SinteseTable'
+import ComparativoTable from '../components/ComparativoTable'
 import SectionCarousel from '../components/SectionCarousel'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
@@ -47,13 +52,10 @@ export default function Dashboard() {
 
   const lastPoint = chartData[chartData.length - 1]
 
-  // Patrimônio líquido (IBKR + CDI + LCI + fundo SAR + savings + pension + cripto + ouro)
   const patLiquido = lastPoint
     ? (lastPoint.ibkr + lastPoint.savings + lastPoint.pension + lastPoint.cdi +
        lastPoint.lci + lastPoint.fundo_sar + lastPoint.cripto + lastPoint.ouro) * 1e6
     : 0
-
-  // Patrimônio ilíquido (Im.1 + Im.2)
   const patIliquido = lastPoint ? (lastPoint.im1 + lastPoint.im2) * 1e6 : 0
 
   const cenariosDisponiveis = plano === 'terceira_margem'
@@ -74,7 +76,6 @@ export default function Dashboard() {
         }}
       >
         <div className="max-w-6xl mx-auto px-4 py-2">
-          {/* Row 1: Title + user */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="w-2 h-5 rounded-sm" style={{ backgroundColor: theme.accent }} />
@@ -82,90 +83,48 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: theme.textFaint }}>{user?.email}</span>
-              <button
-                onClick={signOut}
-                className="p-1 rounded transition-colors"
-                style={{ color: theme.textFaint }}
-                title="Sair"
-              >
+              <button onClick={signOut} className="p-1 rounded transition-colors" style={{ color: theme.textFaint }} title="Sair">
                 <LogOut size={14} />
               </button>
             </div>
           </div>
 
-          {/* Row 2: Plano tabs + Cenário tabs + Patrimônio boxes */}
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Plano selector */}
-            <div
-              className="flex gap-0.5 rounded-lg p-0.5"
-              style={{ backgroundColor: theme.isDark ? theme.surface : theme.bgAlt, border: `1px solid ${theme.surfaceBorder}` }}
-            >
+            <div className="flex gap-0.5 rounded-lg p-0.5" style={{ backgroundColor: theme.isDark ? theme.surface : theme.bgAlt, border: `1px solid ${theme.surfaceBorder}` }}>
               {PLANOS.map((p) => (
                 <button
                   key={p.key}
-                  onClick={() => {
-                    setPlano(p.key)
-                    if (p.key === 'terceira_margem' && cenario === 'ultra') setCenario('pessim')
-                  }}
+                  onClick={() => { setPlano(p.key); if (p.key === 'terceira_margem' && cenario === 'ultra') setCenario('pessim') }}
                   className="px-3 py-1 rounded-md text-xs font-semibold transition-all duration-200"
-                  style={{
-                    backgroundColor: plano === p.key ? theme.accent : 'transparent',
-                    color: plano === p.key ? theme.textInverse : theme.textMuted,
-                  }}
+                  style={{ backgroundColor: plano === p.key ? theme.accent : 'transparent', color: plano === p.key ? theme.textInverse : theme.textMuted }}
                 >
                   {p.short}
                 </button>
               ))}
             </div>
 
-            {/* Cenário selector */}
-            <div
-              className="flex gap-0.5 rounded-lg p-0.5"
-              style={{ backgroundColor: theme.isDark ? theme.surface : theme.bgAlt, border: `1px solid ${theme.surfaceBorder}` }}
-            >
+            <div className="flex gap-0.5 rounded-lg p-0.5" style={{ backgroundColor: theme.isDark ? theme.surface : theme.bgAlt, border: `1px solid ${theme.surfaceBorder}` }}>
               {cenariosDisponiveis.map((c) => (
                 <button
                   key={c.key}
                   onClick={() => setCenario(c.key)}
                   className="px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200"
-                  style={{
-                    backgroundColor: cenario === c.key ? theme.accentBg : 'transparent',
-                    color: cenario === c.key ? theme.accent : theme.textFaint,
-                    border: cenario === c.key ? `1px solid ${theme.accentBorder}` : '1px solid transparent',
-                  }}
+                  style={{ backgroundColor: cenario === c.key ? theme.accentBg : 'transparent', color: cenario === c.key ? theme.accent : theme.textFaint, border: cenario === c.key ? `1px solid ${theme.accentBorder}` : '1px solid transparent' }}
                 >
                   {c.short}
                 </button>
               ))}
             </div>
 
-            {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Pat Líquido */}
-            <div
-              className="rounded-lg px-3 py-1.5 min-w-[130px] text-center"
-              style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}
-            >
-              <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>
-                Líquido
-              </div>
-              <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>
-                {loading ? '...' : fmt(patLiquido)}
-              </div>
+            <div className="rounded-lg px-3 py-1.5 min-w-[130px] text-center" style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}>
+              <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Líquido</div>
+              <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>{loading ? '...' : fmt(patLiquido)}</div>
             </div>
-
-            {/* Pat Ilíquido */}
-            <div
-              className="rounded-lg px-3 py-1.5 min-w-[130px] text-center"
-              style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}
-            >
-              <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>
-                Ilíquido
-              </div>
-              <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>
-                {loading ? '...' : fmt(patIliquido)}
-              </div>
+            <div className="rounded-lg px-3 py-1.5 min-w-[130px] text-center" style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}>
+              <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Ilíquido</div>
+              <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>{loading ? '...' : fmt(patIliquido)}</div>
             </div>
           </div>
         </div>
@@ -185,9 +144,9 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Charts carousel */}
+        {/* Gráficos */}
         <SectionCarousel
-          labels={['Evolução', 'LCI/RF', 'Valorização']}
+          labels={['Evolução', 'LCI/RF', 'Valorização', 'Comparativo', 'Cobertura', 'Sensibilidade']}
           theme={theme}
         >
           <PatrimonioChart
@@ -198,6 +157,18 @@ export default function Dashboard() {
           />
           <LciChart data={allCenarios} cenarioAtivo={cenario} theme={theme} />
           <ValorizacaoChart baseData={chartData} plano={plano} theme={theme} />
+          <ComparativoChart cenario={cenario} theme={theme} />
+          <CoberturaChart data={chartData} plano={plano} theme={theme} />
+          <SensibilidadeHeatmap plano={plano} theme={theme} />
+        </SectionCarousel>
+
+        {/* Tabelas */}
+        <SectionCarousel
+          labels={['Síntese', 'Comparativo']}
+          theme={theme}
+        >
+          <SinteseTable theme={theme} />
+          <ComparativoTable cenario={cenario} theme={theme} />
         </SectionCarousel>
       </main>
     </div>
