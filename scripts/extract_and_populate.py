@@ -13,6 +13,24 @@ import urllib.request
 SUPABASE_URL = "https://frdvafcdxxaptfiiveeu.supabase.co"
 SUPABASE_KEY = "sb_secret_QeNNWSFjA3yOMckA3Ghomw_JaraEVYe"
 N_MONTHS = 84
+CAMBIO = 5.80
+
+
+def cripto_at_fallback(m):
+    """Fallback cripto_at — mesma lógica dos scripts Master/Sprint.
+    Base: USD 2.917 × R$5.80. Aportes USD 300/mês de mar a jul/2026.
+    Crescimento 20% a.a."""
+    rate = 0.20 / 12
+    base = 2_917 * CAMBIO  # R$16.919
+    if m < 2:
+        return base * ((1 + rate) ** m)
+    aporte = 300 * CAMBIO
+    bal = base * ((1 + rate) ** 2)
+    for i in range(2, m + 1):
+        bal = bal * (1 + rate)
+        if i <= 6:
+            bal += aporte
+    return bal
 
 SCRIPTS = {
     'master': os.path.expanduser(
@@ -292,9 +310,9 @@ def extract_tm(ns):
                 rim = h.get('rim', h.get('rim1', 0) + h.get('rim2', 0))
                 pat = h.get('pat', 0)
 
-                # cripto — TM pode não modelar separadamente
-                cripto_fn = ns.get('cripto_at')
-                cripto = cripto_fn(m) if cripto_fn else 0
+                # cripto — TM não define cripto_at, usar fallback
+                cripto_fn = ns.get('cripto_at', cripto_at_fallback)
+                cripto = cripto_fn(m)
 
                 ouro_val = ibkr_val * 0.08 / 0.92 if ibkr_val > 0 else 0
 
@@ -312,7 +330,7 @@ def extract_tm(ns):
 
                 sav = ns['savings_raw'](m) if m < MIGRATE_M else 0
                 pen = ns['pension_raw'](m) if m < MIGRATE_M else 0
-                cripto = ns.get('cripto_at', lambda m: 0)(m)
+                cripto = ns.get('cripto_at', cripto_at_fallback)(m)
                 im1 = ns.get('im1_mkt', lambda m: 0)(m)
                 im2 = ns.get('im2_mkt', lambda m: 0)(m)
                 rim = ns.get('renda_total_im', lambda m: 0)(m)
@@ -354,7 +372,7 @@ def upsert_to_supabase(rows):
         batch = rows[i:i + batch_size]
         data = json.dumps(batch).encode('utf-8')
 
-        url = f"{SUPABASE_URL}/rest/v1/patrimonio_calculado"
+        url = f"{SUPABASE_URL}/rest/v1/patrimonio_calculado?on_conflict=data_ref,plano,cenario"
         req = urllib.request.Request(url, data=data, method='POST')
         req.add_header('apikey', SUPABASE_KEY)
         req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
