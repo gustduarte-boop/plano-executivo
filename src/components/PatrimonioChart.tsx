@@ -165,7 +165,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
           data={merged}
           margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
           onMouseMove={handleChartEvent}
-          barCategoryGap="35%"
+          barCategoryGap="5%"
         >
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
@@ -185,7 +185,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
 
           {/* Projetado — barras largas */}
           {STACK_ORDER.map((key) => (
-            <Bar key={key} dataKey={key} name={LABELS[key]} stackId="proj" fill={COLORS[key]} fillOpacity={0.85} maxBarSize={28} />
+            <Bar key={key} dataKey={key} name={LABELS[key]} stackId="proj" fill={COLORS[key]} fillOpacity={0.85} />
           ))}
 
           {/* Real — barras com shape customizado posicionado no terço correto */}
