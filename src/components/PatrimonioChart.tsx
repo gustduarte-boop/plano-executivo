@@ -36,16 +36,15 @@ interface Props {
   onHover?: (point: HoverPoint | null) => void
 }
 
-// Custom bar shape: outline only (hollow bar)
+// Custom bar shape: solid narrow bar (1/3 width), centered on top of projection
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function OutlineBar(props: any) {
+function NarrowBar(props: any) {
   const { x, y, width, height, fill } = props
   if (!height || height <= 0) return null
-  // Narrower bar (1/3 width), centered
   const w = width / 3
   const xOff = x + (width - w) / 2
   return (
-    <rect x={xOff} y={y} width={w} height={height} fill="none" stroke={fill} strokeWidth={1.5} rx={1} />
+    <rect x={xOff} y={y} width={w} height={height} fill={fill} fillOpacity={0.95} stroke="#000" strokeWidth={0.5} strokeOpacity={0.3} rx={1} />
   )
 }
 
@@ -158,7 +157,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
             <Bar key={key} dataKey={key} name={LABELS[key]} stackId="proj" fill={COLORS[key]} fillOpacity={0.85} />
           ))}
 
-          {/* Real — barras outline sobrepostas (1/3 largura, vazadas) */}
+          {/* Real — barras sólidas finas sobrepostas (1/3 largura) */}
           {hasReal && showReal && STACK_ORDER.map((key) => (
             <Bar
               key={`r_${key}`}
@@ -166,7 +165,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
               name={`Real ${LABELS[key]}`}
               stackId="real"
               fill={COLORS[key]}
-              shape={<OutlineBar />}
+              shape={<NarrowBar />}
               legendType="none"
             />
           ))}
