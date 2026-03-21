@@ -177,7 +177,7 @@ export default function Dashboard() {
           <CenariosSalariaisChart plano={plano} theme={theme} />
           <SinteseTable theme={theme} />
           <div className="space-y-4">
-            <TabelaPatrimonial data={fullData} theme={theme} />
+            <TabelaPatrimonial data={fullData} saldosReais={saldosReais} theme={theme} />
             <TabelaRendaDisponivel plano={plano} cenario={cenario} theme={theme} />
           </div>
           <div className="space-y-4">

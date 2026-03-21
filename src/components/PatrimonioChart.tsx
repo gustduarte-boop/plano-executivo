@@ -47,9 +47,18 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     )
   }
 
+  // Match saldos reais to nearest chart point (within 2 months)
   const merged = data.map((d) => {
-    const real = saldosReais.find((s) => s.data_ref === d.data_ref)
-    return { ...d, real: real ? real.total : undefined }
+    const dDate = new Date(d.data_ref).getTime()
+    let closest: typeof saldosReais[0] | undefined
+    let minDist = Infinity
+    for (const s of saldosReais) {
+      const dist = Math.abs(new Date(s.data_ref).getTime() - dDate)
+      if (dist < minDist) { minDist = dist; closest = s }
+    }
+    // Allow match within 62 days (~2 months)
+    const real = closest && minDist < 62 * 86400000 ? closest.total : undefined
+    return { ...d, real }
   })
 
   const hasReal = merged.some((d) => d.real !== undefined)
