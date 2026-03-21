@@ -6,7 +6,7 @@ PASSO 1 — IDENTIFICAÇÃO VISUAL DA INSTITUIÇÃO:
 Antes de ler valores, identifique a instituição pela aparência:
 - BANCO DO BRASIL: cor amarela/azul, logo BB, "Banco do Brasil", "bb.com.br"
 - NUBANK: cor roxa/lilás, logo Nu, "Nubank", fundo roxo escuro
-- XP INVESTIMENTOS: cor laranja/preta, logo XP, "XP Inc", "xpi.com.br"
+- XP INVESTIMENTOS: fundo preto (dark mode), header com seta ← e título da categoria ("Renda Variável Brasil", "Alternativos", "Renda Fixa"), ícone circular com % amarelo/dourado, "Total Investido", "Meus Ativos — X ativo(s) encontrado(s)", cards com fundo cinza escuro, badges "Risco Médio"/"Risco Alto" em dourado, campos "Posição/Valor aplicado/Rendimento/Valor líquido/Cotização de resgate", botões "Resgatar" (outline amarelo) e "Investir" (filled amarelo), rendimento verde com ▲
 - IBKR: cor vermelha/branca, "Interactive Brokers", "IBKR", interface de trading
 - BINANCE: cor amarela/preta, fundo escuro #181A20, "Visão Geral", tabs "Earn/Spot/Fundos", "Criptomoeda/Conta", botão amarelo "Adicionar fundos", nav "Início/Mercados/Trade/Descubra/Ativos", valores em USDT, botões "Earn" e "TRADE" por ativo
 - SABB: logo SABB, "Saudi British Bank", texto em árabe, valores em SAR
@@ -15,7 +15,7 @@ Antes de ler valores, identifique a instituição pela aparência:
 PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
 - BANCO DO BRASIL: "Fundo de Ações Vale I", "LCI BB", "Ações Vale", "BB Ações", "Poupança BB"
 - NUBANK: "Caixinha Construir Casa", "Caixinha Turbo", "Caixinha Meu Sonho de Consumo", "Reserva de Emergência", "RDB", "Cofrinhos"
-- XP INVESTIMENTOS: "WEGE3", "Trend Ouro FIF", "XP Long Biased", "XP Referenciado"
+- XP INVESTIMENTOS: "WEGE3" (Weg), "Trend Ouro FIF Multi RL", "XP Long Biased FIC FIM RL", "XP Referenciado", categorias "Renda Variável Brasil", "Alternativos", "Renda Fixa"
 - IBKR: "VTI", "VXUS", "BND", "VNQ", "GLD", ETFs americanos, valores em USD
 - BINANCE: "BTC" (Bitcoin), "ETH" (Ethereum), "USDT" (TetherUS), "BNB", "SOL" (Solana), "ADA" (Cardano), "DOT" (Polkadot), "RLC" (iExecRLC), "FET" (Fetch.ai), "ONDO" (Ondo Finance), valores em USDT, PNL em verde/vermelho
 - SABB: "Commodity Investment Account", fundo SAR
