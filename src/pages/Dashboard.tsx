@@ -137,8 +137,17 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* 1. Gráficos */}
-        <SectionCarousel labels={['Evolução', 'LCI/RF', 'Valorização', 'Comparativo', 'Cobertura']} theme={theme}>
+        {/* Carousel único — todos os slides em sequência */}
+        <SectionCarousel
+          labels={[
+            'Evolução', 'LCI/RF', 'Valorização', 'Comparativo', 'Cobertura',
+            'Im.1', 'Im.2', 'Sensibilidade',
+            'Monte Carlo', 'Stress+Cisne', 'Salariais F2',
+            'Síntese', 'Patrimonial', 'Renda Disp.',
+            'Premissas', 'Fotografia', 'Metodologia',
+          ]}
+          theme={theme}
+        >
           <PatrimonioChart data={chartData} saldosReais={saldosReais} titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`} theme={theme} onHover={onChartHover} />
           <LciChart data={allCenarios} cenarioAtivo={cenario} theme={theme} />
           <ValorizacaoChart baseData={chartData} plano={plano} theme={theme} />
@@ -147,36 +156,21 @@ export default function Dashboard() {
             <ComparativoTable cenario={cenario} theme={theme} />
           </div>
           <CoberturaChart data={chartData} plano={plano} theme={theme} />
-        </SectionCarousel>
-
-        {/* 2. Imóveis */}
-        <SectionCarousel labels={['Im.1 Benchmark', 'Im.2 Maturação', 'Sensibilidade']} theme={theme}>
           <Im1Benchmark theme={theme} />
           <Im2Maturacao plano={plano} theme={theme} />
           <SensibilidadeHeatmap plano={plano} theme={theme} />
-        </SectionCarousel>
-
-        {/* 3. Análises */}
-        <SectionCarousel labels={['Monte Carlo', 'Stress Test', 'Cisne Negro', 'Salariais F2']} theme={theme}>
           <MonteCarloChart plano={plano} theme={theme} />
-          <StressTestChart plano={plano} theme={theme} />
-          <CisneNegroChart plano={plano} theme={theme} />
+          <div className="space-y-4">
+            <StressTestChart plano={plano} theme={theme} />
+            <CisneNegroChart plano={plano} theme={theme} />
+          </div>
           <CenariosSalariaisChart plano={plano} theme={theme} />
-        </SectionCarousel>
-
-        {/* 4. Tabelas */}
-        <SectionCarousel labels={['Síntese', 'Comparativo', 'Patrimonial 84m', 'Renda Disponível']} theme={theme}>
           <SinteseTable theme={theme} />
-          <ComparativoTable cenario={cenario} theme={theme} />
           <TabelaPatrimonial data={fullData} theme={theme} />
           <TabelaRendaDisponivel plano={plano} cenario={cenario} theme={theme} />
-        </SectionCarousel>
-
-        {/* 5. Docs */}
-        <SectionCarousel labels={['Nota Metodológica', 'Premissas', 'Fotografia']} theme={theme}>
-          <NotaMetodologica theme={theme} />
           <PremissasTable theme={theme} />
           <FotografiaPatrimonial theme={theme} />
+          <NotaMetodologica theme={theme} />
         </SectionCarousel>
       </main>
     </div>
