@@ -81,9 +81,11 @@ export default function EntradaDados({ theme, onClose }: Props) {
             </div>
           )}
 
-          {analysis?.error === 'no_api_key' && (
+          {analysis?.error && (
             <div className="rounded-lg p-3 text-xs" style={{ backgroundColor: theme.isDark ? 'rgba(239,159,39,0.1)' : 'rgba(239,159,39,0.08)', border: '1px solid rgba(239,159,39,0.3)', color: '#EF9F27' }}>
-              IA não disponível — preencha manualmente.
+              {analysis.error === 'no_api_key'
+                ? 'IA não disponível — preencha manualmente.'
+                : `IA: ${analysis.observacao || analysis.error}`}
             </div>
           )}
 

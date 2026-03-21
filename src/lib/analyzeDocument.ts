@@ -1,7 +1,4 @@
 const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || ''
-const SUPABASE_FUNC_URL = import.meta.env.VITE_SUPABASE_URL
-  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-document`
-  : ''
 
 const SYSTEM_PROMPT = `Você é um assistente financeiro que analisa prints/screenshots de extratos bancários e corretoras.
 
@@ -46,67 +43,81 @@ export interface AnalysisResult {
 }
 
 export async function analyzeDocument(file: File): Promise<AnalysisResult> {
+  console.log('[AI] Starting analysis for', file.name, file.type, file.size, 'bytes')
+
   const base64 = await fileToBase64(file)
   const mediaType = file.type || 'image/png'
-
-  // Try Edge Function first, fall back to direct API
-  if (SUPABASE_FUNC_URL) {
-    try {
-      const resp = await fetch(SUPABASE_FUNC_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_base64: base64, media_type: mediaType }),
-      })
-      if (resp.ok) return await resp.json()
-    } catch {
-      // Fall through to direct API
-    }
-  }
+  console.log('[AI] Base64 ready, length:', base64.length)
 
   if (!ANTHROPIC_KEY) {
+    console.log('[AI] No API key configured')
     return {
-      fonte: 'desconhecido',
-      campo: 'desconhecido',
-      valores: [],
-      valor_principal: 0,
-      moeda: 'BRL',
-      data_ref: null,
-      confianca: 'baixa',
+      fonte: 'desconhecido', campo: 'desconhecido', valores: [],
+      valor_principal: 0, moeda: 'BRL', data_ref: null, confianca: 'baixa',
       observacao: 'API key não configurada. Preencha manualmente.',
       error: 'no_api_key',
     }
   }
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-          { type: 'text', text: 'Analise esta imagem e extraia as informações financeiras.' },
-        ],
-      }],
-    }),
-  })
-
-  const result = await resp.json()
-  const text = result.content?.[0]?.text || ''
-
+  console.log('[AI] Calling Anthropic API...')
   try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: 'Analise esta imagem e extraia as informações financeiras.' },
+          ],
+        }],
+      }),
+    })
+
+    console.log('[AI] Response status:', resp.status)
+    const result = await resp.json()
+    console.log('[AI] Response body:', JSON.stringify(result).substring(0, 300))
+
+    if (!resp.ok) {
+      return {
+        fonte: 'erro', campo: 'desconhecido', valores: [],
+        valor_principal: 0, moeda: 'BRL', data_ref: null, confianca: 'baixa',
+        observacao: `API error ${resp.status}: ${result.error?.message || JSON.stringify(result)}`,
+        error: 'api_error',
+      }
+    }
+
+    const text = result.content?.[0]?.text || ''
+    console.log('[AI] Extracted text:', text.substring(0, 200))
+
     const jsonMatch = text.match(/\{[\s\S]*\}/)
-    return jsonMatch ? JSON.parse(jsonMatch[0]) : { fonte: 'erro', campo: 'desconhecido', valores: [], valor_principal: 0, moeda: 'BRL', data_ref: null, confianca: 'baixa', observacao: text, error: 'parse_error' }
-  } catch {
-    return { fonte: 'erro', campo: 'desconhecido', valores: [], valor_principal: 0, moeda: 'BRL', data_ref: null, confianca: 'baixa', observacao: text, error: 'parse_error' }
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0])
+      console.log('[AI] Parsed result:', parsed)
+      return parsed
+    }
+
+    return {
+      fonte: 'erro', campo: 'desconhecido', valores: [],
+      valor_principal: 0, moeda: 'BRL', data_ref: null, confianca: 'baixa',
+      observacao: text, error: 'parse_error',
+    }
+  } catch (e) {
+    console.error('[AI] Exception:', e)
+    return {
+      fonte: 'erro', campo: 'desconhecido', valores: [],
+      valor_principal: 0, moeda: 'BRL', data_ref: null, confianca: 'baixa',
+      observacao: `Exception: ${e}`, error: 'exception',
+    }
   }
 }
 
@@ -115,7 +126,7 @@ function fileToBase64(file: File): Promise<string> {
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result as string
-      resolve(result.split(',')[1]) // Remove data:...;base64, prefix
+      resolve(result.split(',')[1])
     }
     reader.onerror = reject
     reader.readAsDataURL(file)
