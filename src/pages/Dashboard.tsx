@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { LogOut } from 'lucide-react'
+import { LogOut, Plus } from 'lucide-react'
 import CountdownCard from '../components/CountdownCard'
 import PatrimonioChart, { type HoverPoint } from '../components/PatrimonioChart'
 import ValorizacaoChart from '../components/ValorizacaoChart'
@@ -21,6 +21,7 @@ import StressTestChart from '../components/StressTestChart'
 import CisneNegroChart from '../components/CisneNegroChart'
 import CenariosSalariaisChart from '../components/CenariosSalariaisChart'
 import SectionCarousel from '../components/SectionCarousel'
+import EntradaDados from '../components/EntradaDados'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { usePatrimonio, useAllCenarios, useSaldosReais, usePatrimonioFull } from '../hooks/usePatrimonio'
@@ -56,6 +57,7 @@ export default function Dashboard() {
   const [plano, setPlano] = useState<Plano>('master')
   const [cenario, setCenario] = useState<Cenario>('base')
   const theme = useTheme(plano)
+  const [showEntrada, setShowEntrada] = useState(false)
   const [hoverPoint, setHoverPoint] = useState<HoverPoint | null>(null)
   const onChartHover = useCallback((p: HoverPoint | null) => setHoverPoint(p), [])
 
@@ -91,6 +93,12 @@ export default function Dashboard() {
               <h1 className="text-base font-bold" style={{ color: theme.text }}>Plano Executivo</h1>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={() => setShowEntrada(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors"
+                style={{ backgroundColor: theme.accent, color: theme.textInverse }}
+                title="Inserir dados">
+                <Plus size={14} /> Dados
+              </button>
               <span className="text-xs" style={{ color: theme.textFaint }}>{user?.email}</span>
               <button onClick={signOut} className="p-1 rounded" style={{ color: theme.textFaint }} title="Sair"><LogOut size={14} /></button>
             </div>
@@ -179,6 +187,8 @@ export default function Dashboard() {
           </div>
         </SectionCarousel>
       </main>
+
+      {showEntrada && <EntradaDados theme={theme} onClose={() => setShowEntrada(false)} />}
     </div>
   )
 }

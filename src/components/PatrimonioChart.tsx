@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import {
   Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Line, ComposedChart, Scatter
@@ -34,7 +35,9 @@ interface Props {
   onHover?: (point: HoverPoint | null) => void
 }
 
-export default function PatrimonioChart({ data, saldosReais, titulo, theme }: Props) {
+export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHover }: Props) {
+  const lastIndexRef = useRef<number | null>(null)
+
   if (!data.length) {
     return (
       <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>
@@ -54,14 +57,41 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme }: Pr
   const tooltipBg = theme.isDark ? '#1e293b' : '#ffffff'
   const tooltipBorder = theme.isDark ? '#334155' : '#e2e8f0'
 
+  // Recharts onMouseMove — fires with chart state including activeTooltipIndex
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleChartEvent = (state: any) => {
+    if (!onHover) return
+    const idx = state?.activeTooltipIndex
+    if (idx == null || idx === lastIndexRef.current) return
+    lastIndexRef.current = idx
+    const d = merged[idx]
+    if (!d) return
+    const liq = (d.ibkr + d.savings + d.pension + d.cdi + d.lci + d.fundo_sar + d.cripto + (d.ouro || 0)) * 1e6
+    const iliq = (d.im1 + d.im2) * 1e6
+    onHover({ mes: d.mes, liquido: liq, iliquido: iliq, total: liq + iliq })
+  }
+
+  const handleMouseLeave = () => {
+    lastIndexRef.current = null
+    onHover?.(null)
+  }
+
   return (
-    <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>
+    <div
+      className="rounded-xl p-5"
+      style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}
+      onMouseLeave={handleMouseLeave}
+    >
       <h2 className="text-sm font-medium mb-4" style={{ color: theme.textMuted }}>{titulo}</h2>
       <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart data={merged} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <ComposedChart
+          data={merged}
+          margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+          onMouseMove={handleChartEvent}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
-          <YAxis tick={{ fontSize: 10, fill: theme.textFaint }} tickFormatter={(v) => `R$${v.toFixed(1)}M`} />
+          <YAxis tick={{ fontSize: 10, fill: theme.textFaint }} tickFormatter={(v) => `R$${v.toFixed(1)}M`} domain={[0, 10]} />
           <Tooltip
             contentStyle={{ backgroundColor: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: 8, fontSize: 12 }}
             labelStyle={{ color: theme.text }}

@@ -20,7 +20,7 @@ interface Props {
 export default function ComparativoChart({ cenario, theme }: Props) {
   const { data, loading } = useComparativo(cenario)
 
-  if (loading || !data.length) {
+  if (!data.length && loading) {
     return (
       <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>
         <h2 className="text-sm font-medium mb-4" style={{ color: theme.textMuted }}>Comparativo Sprint / TM / Master</h2>
@@ -41,7 +41,7 @@ export default function ComparativoChart({ cenario, theme }: Props) {
         <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
-          <YAxis tick={{ fontSize: 10, fill: theme.textFaint }} tickFormatter={(v) => `R$${v.toFixed(1)}M`} />
+          <YAxis tick={{ fontSize: 10, fill: theme.textFaint }} tickFormatter={(v) => `R$${v.toFixed(0)}M`} domain={[0, 10]} />
           <Tooltip
             contentStyle={{ backgroundColor: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: 8, fontSize: 12 }}
             labelStyle={{ color: theme.text }}
@@ -51,9 +51,9 @@ export default function ComparativoChart({ cenario, theme }: Props) {
           <ReferenceLine x="Jul/2027" stroke="#E24B4A" strokeDasharray="3 3" strokeOpacity={0.5} label={{ value: 'Sprint', fill: '#E24B4A', fontSize: 9 }} />
           <ReferenceLine x="Mar/2028" stroke="#1D9E75" strokeDasharray="3 3" strokeOpacity={0.5} label={{ value: 'TM', fill: '#1D9E75', fontSize: 9 }} />
           <ReferenceLine x="Mar/2029" stroke="#185FA5" strokeDasharray="3 3" strokeOpacity={0.5} label={{ value: 'Master', fill: '#185FA5', fontSize: 9 }} />
-          <Line type="monotone" dataKey="sprint" name="Sprint" stroke={PLAN_COLORS.sprint} strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="terceira_margem" name="Terceira Margem" stroke={PLAN_COLORS.terceira_margem} strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="master" name="Master" stroke={PLAN_COLORS.master} strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="sprint" name="Sprint" stroke={PLAN_COLORS.sprint} strokeWidth={2} dot={false} animationDuration={600} />
+          <Line type="monotone" dataKey="terceira_margem" name="Terceira Margem" stroke={PLAN_COLORS.terceira_margem} strokeWidth={2} dot={false} animationDuration={600} />
+          <Line type="monotone" dataKey="master" name="Master" stroke={PLAN_COLORS.master} strokeWidth={2} dot={false} animationDuration={600} />
         </LineChart>
       </ResponsiveContainer>
     </div>

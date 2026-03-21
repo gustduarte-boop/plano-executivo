@@ -17,7 +17,6 @@ export function useComparativo(cenario: Cenario) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setLoading(true)
     supabase
       .from('patrimonio_calculado')
       .select('plano,data_ref,patrimonio_total_brl')
