@@ -390,11 +390,207 @@ def upsert_to_supabase(rows):
     print("Concluído.")
 
 
+# ── EXTRACT SIMULACOES EXTRAS ──
+def extract_extras(ns, plano):
+    """Extrai Monte Carlo, Stress Test, Cisne Negro e Fluxo Mensal."""
+    import numpy as np
+    extras = []
+
+    # ── MONTE CARLO ──
+    mc_ibkr = ns.get('mc_ibkr')
+    mc_total = ns.get('mc_total')
+    mc_renda = ns.get('mc_renda')
+    if mc_ibkr is not None and len(mc_ibkr) > 0:
+        print(f"  Monte Carlo: {len(mc_ibkr)} simulações")
+        def percentiles(arr):
+            p10, p50, p90 = np.percentile(arr, [10, 50, 90])
+            return {'p10': round(float(p10), 3), 'p50': round(float(p50), 3), 'p90': round(float(p90), 3)}
+        # Salvar histograma (bins) ao invés dos 5000 valores raw
+        def histogram(arr, bins=50):
+            counts, edges = np.histogram(arr, bins=bins)
+            return {
+                'counts': [int(c) for c in counts],
+                'edges': [round(float(e), 3) for e in edges],
+            }
+        mc_data = {
+            'n_sims': len(mc_ibkr),
+            'ibkr': {'percentiles': percentiles(mc_ibkr), 'histogram': histogram(mc_ibkr)},
+            'total': {'percentiles': percentiles(mc_total), 'histogram': histogram(mc_total)} if mc_total is not None else None,
+            'renda': {'percentiles': percentiles(mc_renda), 'histogram': histogram(mc_renda)} if mc_renda is not None else None,
+        }
+        extras.append({'plano': plano, 'tipo': 'monte_carlo', 'dados': mc_data})
+    else:
+        print(f"  Monte Carlo: não encontrado")
+
+    # ── STRESS TEST ──
+    # Os scripts calculam stress_scenarios no namespace
+    stress_data = []
+    # Tentar extrair as séries de stress do namespace
+    # Master/Sprint: stress como linhas de patrimônio
+    MIGRATE_M = ns.get('MIGRATE_M', 38)
+    TRANSITION_M = ns.get('TRANSITION_M', MIGRATE_M + 1)
+
+    stress_params = [
+        {'name': 'Base', 'ibkr_r': 0.08, 'ipca': 0.045, 'cambio': 5.80, 'occ': 1.0, 'color': '#185FA5', 'style': 'solid'},
+        {'name': 'Moderado', 'ibkr_r': 0.06, 'ipca': 0.060, 'cambio': 5.20, 'occ': 0.85, 'color': '#EF9F27', 'style': 'solid'},
+        {'name': 'Severo', 'ibkr_r': 0.04, 'ipca': 0.080, 'cambio': 4.80, 'occ': 0.80, 'color': '#E24B4A', 'style': 'solid'},
+    ]
+
+    # Calcular patrimônio sob stress usando total_pat ou similar
+    total_pat_fn = ns.get('total_pat')
+    sims = ns.get('sims', {})
+
+    if total_pat_fn and sims:
+        points = list(range(0, N_MONTHS, 4))
+        for sp in stress_params:
+            try:
+                vals = [round(float(total_pat_fn(m, 'inter' if 'inter' in sims else 'base', sp.get('cambio', 0.10))), 3) for m in points]
+                sp['data'] = vals
+                sp['points'] = points
+            except Exception:
+                sp['data'] = []
+        stress_data = stress_params
+    elif sims:
+        # Fallback: usar cenários existentes como proxy
+        points = list(range(0, N_MONTHS, 4))
+        for key_label in [('base', 'Base'), ('pessim', 'Pessimista'), ('otim', 'Otimista')]:
+            key, label = key_label
+            if key in sims:
+                stress_data.append({
+                    'name': label,
+                    'data': [round(float(sims[key].get('ibkr', {}).get(m, 0) + sims[key].get('cdi', {}).get(m, 0) +
+                                        sims[key].get('lci', {}).get(m, 0)) / 1e6, 3)
+                             for m in points] if isinstance(sims[key], dict) and 'ibkr' in sims[key] else [],
+                    'points': points,
+                    'color': '#185FA5' if key == 'base' else '#EF9F27' if key == 'pessim' else '#1D9E75',
+                    'style': 'solid',
+                })
+
+    if stress_data:
+        extras.append({'plano': plano, 'tipo': 'stress_test', 'dados': {'scenarios': stress_data}})
+        print(f"  Stress Test: {len(stress_data)} cenários")
+
+    # ── CISNE NEGRO ──
+    cisne_fn = ns.get('simular_cisne_negro')
+    if cisne_fn:
+        try:
+            # A função retorna tupla (cdi_ini, cdi_final) ou float
+            result_6m = cisne_fn(6)
+            result_12m = cisne_fn(12)
+            if isinstance(result_6m, tuple):
+                cdi_base = float(result_6m[0])
+                cdi_6m = float(result_6m[1])
+                cdi_12m = float(result_12m[1])
+            else:
+                cdi_6m = float(result_6m)
+                cdi_12m = float(result_12m)
+                result_0 = cisne_fn(0)
+                cdi_base = float(result_0[0]) if isinstance(result_0, tuple) else float(result_0)
+            extras.append({'plano': plano, 'tipo': 'cisne_negro', 'dados': {
+                'base': round(cdi_base, 0),
+                'stress_6m': round(cdi_6m, 0),
+                'stress_12m': round(cdi_12m, 0),
+            }})
+            print(f"  Cisne Negro: base={cdi_base:.0f}, 6m={cdi_6m:.0f}, 12m={cdi_12m:.0f}")
+        except Exception as e:
+            print(f"  Cisne Negro: erro — {e}")
+    else:
+        # Tentar extrair variáveis pré-calculadas
+        cdi_ini_cn = ns.get('cdi_ini_cn')
+        cdi_6m = ns.get('cdi_6m')
+        cdi_12m = ns.get('cdi_12m')
+        if cdi_ini_cn is not None:
+            extras.append({'plano': plano, 'tipo': 'cisne_negro', 'dados': {
+                'base': round(float(cdi_ini_cn), 0),
+                'stress_6m': round(float(cdi_6m), 0),
+                'stress_12m': round(float(cdi_12m), 0),
+            }})
+            print(f"  Cisne Negro: base={cdi_ini_cn:.0f}, 6m={cdi_6m:.0f}, 12m={cdi_12m:.0f}")
+        else:
+            print(f"  Cisne Negro: função não encontrada")
+
+    # ── FLUXO MENSAL ──
+    salary_scenarios = ns.get('SALARY_SCENARIOS', {})
+    custo_vida_fn = ns.get('custo_vida')
+    plano_saude_fn = ns.get('plano_saude') or ns.get('plano_saude_sprint')
+    renda_total_fn = ns.get('renda_total_im')
+    MANUT = ns.get('MANUT_MES', 2000)
+
+    scenario_map = {'ultra': 'ultra', 'pessim': 'pessim', 'inter': 'base', 'otim': 'otim'}
+
+    if custo_vida_fn and sims:
+        fluxo = {}
+        for sim_key, cenario_db in scenario_map.items():
+            if sim_key not in salary_scenarios and sim_key not in sims:
+                continue
+            sal_val = salary_scenarios.get(sim_key, {}).get('sal', 0)
+            SALARY_M = ns.get('SALARY_M', 47)
+            meses = []
+            for m in range(N_MONTHS):
+                custo = 0
+                sal = 0
+                rim = 0
+                if m >= TRANSITION_M:
+                    m_ret = m - TRANSITION_M
+                    custo = float(custo_vida_fn(m))
+                    if plano_saude_fn:
+                        try:
+                            custo += float(plano_saude_fn(m_ret))
+                        except Exception:
+                            pass
+                    custo += MANUT
+                    sal = sal_val if m >= SALARY_M else 0
+                if renda_total_fn:
+                    try:
+                        rim = float(renda_total_fn(m))
+                    except Exception:
+                        rim = 0
+                excedente = rim + sal - custo if custo > 0 else 0
+                ano = 2026 + m // 12
+                mes_n = (m % 12) + 1
+                meses.append({
+                    'm': m,
+                    'data': f"{ano}-{mes_n:02d}-01",
+                    'renda': round(rim, 0),
+                    'salario': round(sal, 0),
+                    'custo': round(custo, 0),
+                    'excedente': round(excedente, 0),
+                })
+            fluxo[cenario_db] = meses
+        if fluxo:
+            extras.append({'plano': plano, 'tipo': 'fluxo_mensal', 'dados': fluxo})
+            print(f"  Fluxo Mensal: {len(fluxo)} cenários")
+
+    return extras
+
+
+def upsert_extras(extras):
+    """Upsert simulacoes_extras no Supabase."""
+    if not extras:
+        return
+    print(f"\nEnviando {len(extras)} extras para simulacoes_extras...")
+    for item in extras:
+        data = json.dumps(item).encode('utf-8')
+        url = f"{SUPABASE_URL}/rest/v1/simulacoes_extras?on_conflict=plano,tipo"
+        req = urllib.request.Request(url, data=data, method='POST')
+        req.add_header('apikey', SUPABASE_KEY)
+        req.add_header('Authorization', f'Bearer {SUPABASE_KEY}')
+        req.add_header('Content-Type', 'application/json')
+        req.add_header('Prefer', 'resolution=merge-duplicates')
+        try:
+            resp = urllib.request.urlopen(req)
+            print(f"  {item['plano']}/{item['tipo']}: {resp.getcode()}")
+        except urllib.error.HTTPError as e:
+            body = e.read().decode()
+            print(f"  ERRO {item['plano']}/{item['tipo']}: {e.code} — {body[:200]}")
+
+
 # ── MAIN ──
 def main():
     mock_reportlab()
 
     all_rows = []
+    all_extras = []
 
     for plano, path in SCRIPTS.items():
         if not os.path.exists(path):
@@ -419,9 +615,17 @@ def main():
         print(f"  {len(rows)} linhas extraídas")
         all_rows.extend(rows)
 
+        # Extras
+        extras = extract_extras(ns, plano)
+        all_extras.extend(extras)
+
     if all_rows:
         upsert_to_supabase(all_rows)
-    else:
+
+    if all_extras:
+        upsert_extras(all_extras)
+
+    if not all_rows and not all_extras:
         print("Nenhum dado extraído.")
 
 
