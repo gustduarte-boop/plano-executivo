@@ -422,49 +422,123 @@ def extract_extras(ns, plano):
     else:
         print(f"  Monte Carlo: não encontrado")
 
-    # ── STRESS TEST ──
-    # Os scripts calculam stress_scenarios no namespace
-    stress_data = []
-    # Tentar extrair as séries de stress do namespace
-    # Master/Sprint: stress como linhas de patrimônio
+    # ── STRESS TEST ── (replica fielmente o loop do script Python)
     MIGRATE_M = ns.get('MIGRATE_M', 38)
     TRANSITION_M = ns.get('TRANSITION_M', MIGRATE_M + 1)
+    SALARY_M_ST = ns.get('SALARY_M', 47)
+    OURO_FRAC_ST = ns.get('OURO_FRAC', 0.08)
+    OURO_RATE_ST = ns.get('OURO_RATE', 0.06)
+    IM1_START_ST = ns.get('IM1_START', 8)
+    IM2_START_ST = ns.get('IM2_START', 21)
+    SELIC_LIQ_ST = ns.get('SELIC_LIQ', 0.1325 * 0.8835)
+    CDI_ST = ns.get('CDI', 0.105)
+    CDI_LIQ_ST = ns.get('CDI_LIQ_FATOR', 0.8835)
+    MANUT_ST = ns.get('MANUT_MES', 2000)
+    savings_raw_fn = ns.get('savings_raw')
+    pension_raw_fn = ns.get('pension_raw')
+    custo_vida_fn = ns.get('custo_vida')
+    plano_saude_fn = ns.get('plano_saude') or ns.get('plano_saude_sprint')
+    renda_liq_im1_fn = ns.get('renda_liq_im1')
+    renda_im2_param_fn = ns.get('renda_im2_param')
+    im1_mkt_param_fn = ns.get('im1_mkt_param', ns.get('im1_mkt'))
+    im2_mkt_param_fn = ns.get('im2_mkt_param', ns.get('im2_mkt'))
+    cripto_fn = ns.get('cripto_at', cripto_at_fallback)
 
-    stress_params = [
-        {'name': 'Base', 'ibkr_r': 0.08, 'ipca': 0.045, 'cambio': 5.80, 'occ': 1.0, 'color': '#185FA5', 'style': 'solid'},
-        {'name': 'Moderado', 'ibkr_r': 0.06, 'ipca': 0.060, 'cambio': 5.20, 'occ': 0.85, 'color': '#EF9F27', 'style': 'solid'},
-        {'name': 'Severo', 'ibkr_r': 0.04, 'ipca': 0.080, 'cambio': 4.80, 'occ': 0.80, 'color': '#E24B4A', 'style': 'solid'},
+    stress_scenarios = [
+        {'name': 'Base (Plano Exec.)', 'ibkr_r': 0.08, 'ipca': 0.045, 'cambio': 5.80, 'occ': 1.0,
+         'sal': 14000, 'val': 0.10, 'fcap': 1.5, 'im2_modo': 'base', 'delay': 0,
+         'color': '#185FA5', 'lw': 2.5, 'style': 'solid'},
+        {'name': 'Stress Moderado', 'ibkr_r': 0.06, 'ipca': 0.060, 'cambio': 5.20, 'occ': 0.85,
+         'sal': 14000, 'val': 0.10, 'fcap': 1.5, 'im2_modo': 'base', 'delay': 0,
+         'color': '#EF9F27', 'lw': 2.5, 'style': 'solid'},
+        {'name': 'Stress Severo', 'ibkr_r': 0.04, 'ipca': 0.080, 'cambio': 4.80, 'occ': 0.80,
+         'sal': 14000, 'val': 0.10, 'fcap': 1.5, 'im2_modo': 'base', 'delay': 0,
+         'color': '#E24B4A', 'lw': 2.5, 'style': 'solid'},
+        {'name': 'Ultra Pessimista', 'ibkr_r': 0.04, 'ipca': 0.080, 'cambio': 4.80, 'occ': 0.50,
+         'sal': 0, 'val': 0.07, 'fcap': 1.2, 'im2_modo': 'conservador', 'delay': 6,
+         'color': '#7F1D1D', 'lw': 2.0, 'style': 'dashed'},
+        {'name': 'Otimista Composto', 'ibkr_r': 0.10, 'ipca': 0.035, 'cambio': 6.50, 'occ': 1.15,
+         'sal': 16000, 'val': 0.15, 'fcap': 1.8, 'im2_modo': 'otimista', 'delay': 0,
+         'color': '#14532D', 'lw': 2.0, 'style': 'dashed'},
     ]
 
-    # Calcular patrimônio sob stress usando total_pat ou similar
-    total_pat_fn = ns.get('total_pat')
-    sims = ns.get('sims', {})
+    points = list(range(0, N_MONTHS, 4))
+    stress_data = []
 
-    if total_pat_fn and sims:
-        points = list(range(0, N_MONTHS, 4))
-        for sp in stress_params:
-            try:
-                vals = [round(float(total_pat_fn(m, 'inter' if 'inter' in sims else 'base', sp.get('cambio', 0.10))), 3) for m in points]
-                sp['data'] = vals
-                sp['points'] = points
-            except Exception:
-                sp['data'] = []
-        stress_data = stress_params
-    elif sims:
-        # Fallback: usar cenários existentes como proxy
-        points = list(range(0, N_MONTHS, 4))
-        for key_label in [('base', 'Base'), ('pessim', 'Pessimista'), ('otim', 'Otimista')]:
-            key, label = key_label
-            if key in sims:
-                stress_data.append({
-                    'name': label,
-                    'data': [round(float(sims[key].get('ibkr', {}).get(m, 0) + sims[key].get('cdi', {}).get(m, 0) +
-                                        sims[key].get('lci', {}).get(m, 0)) / 1e6, 3)
-                             for m in points] if isinstance(sims[key], dict) and 'ibkr' in sims[key] else [],
-                    'points': points,
-                    'color': '#185FA5' if key == 'base' else '#EF9F27' if key == 'pessim' else '#1D9E75',
-                    'style': 'solid',
-                })
+    for sp in stress_scenarios:
+        try:
+            bal_ibkr = 10594 * sp['cambio'] * (1 - OURO_FRAC_ST)
+            bal_ouro = 10594 * sp['cambio'] * OURO_FRAC_ST
+            cdi = 0
+            tots = []
+
+            for m in range(N_MONTHS):
+                # Renda Im.1
+                rim1 = renda_liq_im1_fn(m) if renda_liq_im1_fn else 0
+                # Renda Im.2 com parâmetros de stress
+                rim2 = 0
+                if renda_im2_param_fn:
+                    delay = sp['delay']
+                    if delay > 0:
+                        rim2 = renda_im2_param_fn(m - delay, sp['im2_modo'], sp['occ']) if m >= IM2_START_ST + delay else 0
+                    else:
+                        rim2 = renda_im2_param_fn(m, sp['im2_modo'], sp['occ'])
+                rim = rim1 + rim2
+
+                if m < MIGRATE_M:
+                    bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12) + 2800 * sp['cambio'] * (1 - OURO_FRAC_ST)
+                    bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12) + 2800 * sp['cambio'] * OURO_FRAC_ST
+                    cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12) + (rim1 if m >= IM1_START_ST else 0)
+                elif m == MIGRATE_M:
+                    sav_pen = (savings_raw_fn(m) + pension_raw_fn(m)) * (sp['cambio'] / CAMBIO) if savings_raw_fn else 0
+                    bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12) + 2800 * sp['cambio'] * (1 - OURO_FRAC_ST) + sav_pen * (1 - OURO_FRAC_ST)
+                    bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12) + 2800 * sp['cambio'] * OURO_FRAC_ST + sav_pen * OURO_FRAC_ST
+                    cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12) + rim
+                elif m < TRANSITION_M:
+                    bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12)
+                    bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12)
+                    cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12)
+                else:
+                    m_ret = m - TRANSITION_M
+                    custo = custo_vida_fn(m) if custo_vida_fn else 14000
+                    if plano_saude_fn:
+                        try:
+                            custo += plano_saude_fn(m_ret)
+                        except Exception:
+                            pass
+                    custo += MANUT_ST
+                    sal = sp['sal'] if m >= SALARY_M_ST else 0
+                    rec = rim + sal
+                    cdi = cdi * (1 + SELIC_LIQ_ST / 12)
+                    if rec >= custo:
+                        cdi += rec - custo
+                    else:
+                        d = custo - rec
+                        cdi = max(0, cdi - d)
+                    bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12)
+                    bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12)
+
+                if m in points:
+                    sav = savings_raw_fn(m) * (sp['cambio'] / CAMBIO) / 1e6 if (savings_raw_fn and m < MIGRATE_M) else 0
+                    pen = pension_raw_fn(m) * (sp['cambio'] / CAMBIO) / 1e6 if (pension_raw_fn and m < MIGRATE_M) else 0
+                    try:
+                        im1v = im1_mkt_param_fn(m, sp['fcap'], sp['val']) / 1e6
+                    except TypeError:
+                        im1v = im1_mkt_param_fn(m, sp['val']) / 1e6
+                    try:
+                        im2v = im2_mkt_param_fn(m, sp['fcap'], sp['val']) / 1e6
+                    except TypeError:
+                        im2v = im2_mkt_param_fn(m, sp['val']) / 1e6
+                    cr = cripto_fn(m) / 1e6
+                    tot = (bal_ibkr + bal_ouro) / 1e6 + sav + pen + im1v + im2v + cr + cdi / 1e6
+                    tots.append(round(float(tot), 3))
+
+            sp_out = {k: sp[k] for k in ['name', 'color', 'style']}
+            sp_out['data'] = tots
+            sp_out['points'] = points
+            stress_data.append(sp_out)
+        except Exception as e:
+            print(f"    Stress '{sp['name']}': erro — {e}")
 
     if stress_data:
         extras.append({'plano': plano, 'tipo': 'stress_test', 'dados': {'scenarios': stress_data}})
@@ -517,6 +591,7 @@ def extract_extras(ns, plano):
     MANUT = ns.get('MANUT_MES', 2000)
 
     scenario_map = {'ultra': 'ultra', 'pessim': 'pessim', 'inter': 'base', 'otim': 'otim'}
+    sims = ns.get('sims', {})
 
     if custo_vida_fn and sims:
         fluxo = {}

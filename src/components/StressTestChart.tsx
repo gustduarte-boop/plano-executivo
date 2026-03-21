@@ -39,7 +39,7 @@ export default function StressTestChart({ plano, theme }: Props) {
     <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>
       <h2 className="text-sm font-bold mb-1" style={{ color: theme.text }}>STRESS TEST — CENÁRIOS ADVERSOS</h2>
       <p className="text-[10px] mb-4" style={{ color: theme.textFaint }}>
-        Base (8%, IPCA 4,5%, R$5,80) · Moderado (6%, 6%, R$5,20) · Severo (4%, 8%, R$4,80)
+        Sólido: Base/Moderado/Severo · Tracejado: Ultra pessimista (sal R$0, occ 50%, CAPEX 1,2×) | Otimista (sal R$16k, occ 115%, CAPEX 1,8×)
       </p>
 
       <ResponsiveContainer width="100%" height={360}>
