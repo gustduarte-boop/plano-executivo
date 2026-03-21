@@ -196,7 +196,7 @@ export default function Dashboard() {
             titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`}
             theme={theme}
           />
-          <LciChart data={allCenarios} theme={theme} />
+          <LciChart data={allCenarios} cenarioAtivo={cenario} theme={theme} />
           <ValorizacaoChart baseData={chartData} plano={plano} theme={theme} />
         </SectionCarousel>
       </main>
