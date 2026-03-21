@@ -36,6 +36,39 @@ interface Props {
   onHover?: (point: HoverPoint | null) => void
 }
 
+// Determines which third of the quarter bar the real month falls in
+// data_ref is the projected quarter start (e.g. 2026-01-01)
+// saldo data_ref is the real month (e.g. 2026-03-01)
+// Returns 0 (1st third), 1 (2nd), or 2 (3rd)
+function getMonthOffset(projDate: string, realDate: string): number {
+  const pMonth = parseInt(projDate.split('-')[1])
+  const rMonth = parseInt(realDate.split('-')[1])
+  const diff = ((rMonth - pMonth) + 12) % 12
+  return Math.min(diff, 2) // 0, 1, or 2
+}
+
+// Custom shape: positions the bar in the correct 1/3 section
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function PositionedRealBar(props: any) {
+  const { x, y, width, height, fill, monthOffset } = props
+  if (!height || height <= 0 || !width) return null
+  const thirdW = width / 3
+  const xPos = x + thirdW * (monthOffset ?? 2)
+  return (
+    <rect
+      x={xPos}
+      y={y}
+      width={thirdW}
+      height={height}
+      fill={fill}
+      fillOpacity={0.3}
+      stroke={fill}
+      strokeWidth={1.5}
+      rx={1}
+    />
+  )
+}
+
 export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHover }: Props) {
   const lastIndexRef = useRef<number | null>(null)
   const [showReal, setShowReal] = useState(true)
@@ -76,6 +109,9 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
       point.r_pension = closest.pension
       point.r_savings = closest.savings
       point.r_ibkr = closest.ibkr
+      // Store offset for positioning (which third of the bar)
+      point._monthOffset = getMonthOffset(d.data_ref, closest.data_ref)
+      point._realDataRef = closest.data_ref
     }
     return point
   })
@@ -97,6 +133,9 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     const iliq = (d.im1 + d.im2) * 1e6
     onHover({ mes: d.mes, liquido: liq, iliquido: iliq, total: liq + iliq })
   }
+
+  // Get the month offset for custom shape rendering
+  const monthOffsets = merged.map((d) => (d._monthOffset as number) ?? 2)
 
   return (
     <div
@@ -126,7 +165,8 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
           data={merged}
           margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
           onMouseMove={handleChartEvent}
-          barGap={-32}
+          barGap={-100}
+          barCategoryGap="15%"
         >
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
@@ -137,28 +177,31 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
             formatter={(value, name) => {
               const v = Number(value)
               if (!isFinite(v) || v === 0) return [null, null]
-              return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, name]
+              const n = String(name)
+              const label = n.startsWith('R:') ? n : (LABELS[n] || n)
+              return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, label]
             }}
           />
           <Legend wrapperStyle={{ fontSize: 10, color: theme.textMuted }} />
 
-          {/* Projetado — barras grossas */}
+          {/* Projetado — barras largas */}
           {STACK_ORDER.map((key) => (
-            <Bar key={key} dataKey={key} name={LABELS[key]} stackId="proj" fill={COLORS[key]} fillOpacity={0.85} maxBarSize={30} />
+            <Bar key={key} dataKey={key} name={LABELS[key]} stackId="proj" fill={COLORS[key]} fillOpacity={0.85} />
           ))}
 
-          {/* Real — barras finas sobrepostas via barGap negativo */}
+          {/* Real — barras com shape customizado posicionado no terço correto */}
           {hasReal && STACK_ORDER.map((key) => (
             <Bar
               key={`r_${key}`}
               dataKey={`r_${key}`}
+              name={`R:${LABELS[key]}`}
               stackId="real"
               fill={COLORS[key]}
-              fillOpacity={0.3}
-              stroke={COLORS[key]}
-              strokeWidth={1.5}
-              maxBarSize={10}
               legendType="none"
+              shape={(props: Record<string, unknown>) => {
+                const idx = props.index as number
+                return <PositionedRealBar {...props} monthOffset={monthOffsets[idx ?? 0]} />
+              }}
             />
           ))}
 
