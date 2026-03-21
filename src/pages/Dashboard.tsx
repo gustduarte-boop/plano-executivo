@@ -15,6 +15,7 @@ import NotaMetodologica from '../components/NotaMetodologica'
 import PremissasTable from '../components/PremissasTable'
 import FotografiaPatrimonial from '../components/FotografiaPatrimonial'
 import TabelaPatrimonial from '../components/TabelaPatrimonial'
+import TabelaRendaDisponivel from '../components/TabelaRendaDisponivel'
 import MonteCarloChart from '../components/MonteCarloChart'
 import StressTestChart from '../components/StressTestChart'
 import CisneNegroChart from '../components/CisneNegroChart'
@@ -136,80 +137,46 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Um único carousel — ordem por impacto visual, correlacionados verticalmente */}
-        <SectionCarousel
-          labels={[
-            'Evolução',        // 1. gráfico barras + tabela patrimonial 84m
-            'LCI/RF',          // 2. gráfico linhas cenários
-            'Comparativo',     // 3. gráfico 3 planos + tabela marcos
-            'Valorização',     // 4. gráfico linhas 4 taxas
-            'Cobertura',       // 5. gráfico % renda/custo
-            'Salariais F2',    // 6. 4 painéis renda vs custo
-            'Im.2 Maturação',  // 7. gráfico + tabela benchmark
-            'Im.1 Benchmark',  // 8. tabela benchmark
-            'Sensibilidade',   // 9. 4 heatmaps
-            'Monte Carlo',     // 10. 3 histogramas
-            'Stress Test',     // 11. gráfico + cisne negro
-            'Síntese',         // 12. tabela 3×3×3
-            'Premissas',       // 13. tabela
-            'Fotografia',      // 14. tabela
-            'Metodologia',     // 15. nota
-          ]}
-          theme={theme}
-        >
-          {/* 1. Evolução — gráfico + tabela patrimonial (fortemente correlacionados) */}
-          <div className="space-y-4">
-            <PatrimonioChart data={chartData} saldosReais={saldosReais} titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`} theme={theme} onHover={onChartHover} />
-            <TabelaPatrimonial data={fullData} theme={theme} />
-          </div>
-
-          {/* 2. LCI/RF */}
+        {/* 1. Gráficos */}
+        <SectionCarousel labels={['Evolução', 'LCI/RF', 'Valorização', 'Comparativo', 'Cobertura']} theme={theme}>
+          <PatrimonioChart data={chartData} saldosReais={saldosReais} titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`} theme={theme} onHover={onChartHover} />
           <LciChart data={allCenarios} cenarioAtivo={cenario} theme={theme} />
-
-          {/* 3. Comparativo — gráfico + tabela marcos (correlacionados) */}
+          <ValorizacaoChart baseData={chartData} plano={plano} theme={theme} />
           <div className="space-y-4">
             <ComparativoChart cenario={cenario} theme={theme} />
             <ComparativoTable cenario={cenario} theme={theme} />
           </div>
-
-          {/* 4. Valorização */}
-          <ValorizacaoChart baseData={chartData} plano={plano} theme={theme} />
-
-          {/* 5. Cobertura */}
           <CoberturaChart data={chartData} plano={plano} theme={theme} />
+        </SectionCarousel>
 
-          {/* 6. Cenários Salariais */}
-          <CenariosSalariaisChart plano={plano} theme={theme} />
-
-          {/* 7. Im.2 — gráfico maturação + tabela (correlacionados) */}
-          <Im2Maturacao plano={plano} theme={theme} />
-
-          {/* 8. Im.1 Benchmark */}
+        {/* 2. Imóveis */}
+        <SectionCarousel labels={['Im.1 Benchmark', 'Im.2 Maturação', 'Sensibilidade']} theme={theme}>
           <Im1Benchmark theme={theme} />
-
-          {/* 9. Sensibilidade */}
+          <Im2Maturacao plano={plano} theme={theme} />
           <SensibilidadeHeatmap plano={plano} theme={theme} />
+        </SectionCarousel>
 
-          {/* 10. Monte Carlo */}
+        {/* 3. Análises */}
+        <SectionCarousel labels={['Monte Carlo', 'Stress Test', 'Cisne Negro', 'Salariais F2']} theme={theme}>
           <MonteCarloChart plano={plano} theme={theme} />
+          <StressTestChart plano={plano} theme={theme} />
+          <CisneNegroChart plano={plano} theme={theme} />
+          <CenariosSalariaisChart plano={plano} theme={theme} />
+        </SectionCarousel>
 
-          {/* 11. Stress Test + Cisne Negro (correlacionados) */}
-          <div className="space-y-4">
-            <StressTestChart plano={plano} theme={theme} />
-            <CisneNegroChart plano={plano} theme={theme} />
-          </div>
-
-          {/* 12. Síntese */}
+        {/* 4. Tabelas */}
+        <SectionCarousel labels={['Síntese', 'Comparativo', 'Patrimonial 84m', 'Renda Disponível']} theme={theme}>
           <SinteseTable theme={theme} />
+          <ComparativoTable cenario={cenario} theme={theme} />
+          <TabelaPatrimonial data={fullData} theme={theme} />
+          <TabelaRendaDisponivel plano={plano} cenario={cenario} theme={theme} />
+        </SectionCarousel>
 
-          {/* 13. Premissas */}
-          <PremissasTable theme={theme} />
-
-          {/* 14. Fotografia */}
-          <FotografiaPatrimonial theme={theme} />
-
-          {/* 15. Metodologia */}
+        {/* 5. Docs */}
+        <SectionCarousel labels={['Nota Metodológica', 'Premissas', 'Fotografia']} theme={theme}>
           <NotaMetodologica theme={theme} />
+          <PremissasTable theme={theme} />
+          <FotografiaPatrimonial theme={theme} />
         </SectionCarousel>
       </main>
     </div>
