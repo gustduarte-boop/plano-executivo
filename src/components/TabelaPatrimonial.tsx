@@ -26,7 +26,7 @@ export default function TabelaPatrimonial({ data, theme }: Props) {
   }
 
   // Usar todos os pontos (amostrados a cada 4 meses no hook)
-  const cols = ['IBKR', 'Savings', 'Pension', 'CDI', 'LCI', 'SAR', 'Im.1', 'Im.2', 'Cripto', 'Total']
+  const cols = ['IBKR', 'Savings', 'Pension', 'CDI', 'RF Brasil', 'SAR', 'Im.1', 'Im.2', 'Cripto', 'Total']
 
   return (
     <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>

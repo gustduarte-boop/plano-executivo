@@ -11,7 +11,7 @@ const ESTRATOS = [
   },
   {
     estrato: '2. Projeção-base 2026–2029',
-    conteudo: 'Evolução patrimonial, renda imobiliária e reserva LCI/RF — baseadas nas premissas do Plano Executivo 3.0 e no cronograma operacional de referência.',
+    conteudo: 'Evolução patrimonial, renda imobiliária e reserva RF Brasil — baseadas nas premissas do Plano Executivo 3.0 e no cronograma operacional de referência.',
     certeza: 'Média',
     certezaDesc: 'Condicionada à execução do Plano: janela operacional set/2026 (Im.1), janela out/2027 (Im.2), aportes IBKR mantidos.',
     certezaCor: '#7A5000',
@@ -19,7 +19,7 @@ const ESTRATOS = [
   },
   {
     estrato: '3. Projeção expandida 2030–2033',
-    conteudo: 'Maturação imobiliária, renda em regime pleno, reserva LCI/RF acumulada — horizonte especulativo com múltiplas premissas incertas.',
+    conteudo: 'Maturação imobiliária, renda em regime pleno, reserva RF Brasil acumulada — horizonte especulativo com múltiplas premissas incertas.',
     certeza: 'Baixa',
     certezaDesc: 'Usar como ordem de grandeza, não como meta patrimonial.',
     certezaCor: '#A32D2D',

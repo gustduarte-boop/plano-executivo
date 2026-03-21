@@ -13,7 +13,7 @@ const COLORS: Record<string, string> = {
 }
 
 const LABELS: Record<string, string> = {
-  cdi: 'CDI Res.', lci: 'LCI/RF', cripto: 'Cripto',
+  cdi: 'CDI Res.', lci: 'RF Brasil', cripto: 'Cripto',
   im2: 'Im.2 (66%)', im1: 'Im.1 (100%)', fundo_sar: 'Fundo SAR',
   pension: 'Pension', savings: 'Savings', ibkr: 'IBKR+Ouro',
 }

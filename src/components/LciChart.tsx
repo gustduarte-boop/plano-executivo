@@ -23,7 +23,7 @@ export default function LciChart({ data, cenarioAtivo, theme }: Props) {
   if (!cenarios.length) {
     return (
       <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>
-        <h2 className="text-sm font-medium mb-4" style={{ color: theme.textMuted }}>Reserva LCI/RF por Cenário</h2>
+        <h2 className="text-sm font-medium mb-4" style={{ color: theme.textMuted }}>Reserva RF Brasil por Cenário</h2>
         <p className="text-sm" style={{ color: theme.textFaint }}>Sem dados.</p>
       </div>
     )
@@ -49,7 +49,7 @@ export default function LciChart({ data, cenarioAtivo, theme }: Props) {
   return (
     <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>
       <h2 className="text-sm font-medium mb-4" style={{ color: theme.textMuted }}>
-        Reserva LCI/RF por Cenário (R$ mil) — <span style={{ color: CENARIO_COLORS[cenarioAtivo] }}>{CENARIO_LABELS[cenarioAtivo]}</span>
+        RF Brasil por Cenário (R$ mil) — <span style={{ color: CENARIO_COLORS[cenarioAtivo] }}>{CENARIO_LABELS[cenarioAtivo]}</span>
       </h2>
       <ResponsiveContainer width="100%" height={320}>
         <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>

@@ -24,10 +24,10 @@ const INSTITUICOES: Instituicao[] = [
     { key: 'cdi_brl', label: 'CDI / Caixinhas (BRL)', moeda: 'BRL' },
   ]},
   { key: 'bb', label: 'Banco do Brasil', campos: [
-    { key: 'lci_brl', label: 'LCI / RF (BRL)', moeda: 'BRL' },
+    { key: 'lci_brl', label: 'RF Brasil — BB+XP (BRL)', moeda: 'BRL' },
   ]},
   { key: 'xp', label: 'XP Investimentos', campos: [
-    { key: 'lci_brl', label: 'LCI / RF (BRL)', moeda: 'BRL' },
+    { key: 'lci_brl', label: 'RF Brasil — BB+XP (BRL)', moeda: 'BRL' },
   ]},
   { key: 'sabb', label: 'SABB', campos: [
     { key: 'fundo_sar_brl', label: 'Fundo SAR (BRL)', moeda: 'BRL' },
@@ -49,7 +49,7 @@ const INSTITUICOES: Instituicao[] = [
     { key: 'savings_usd', label: 'Savings (USD)', moeda: 'USD' },
     { key: 'pension_usd', label: 'Pension (USD)', moeda: 'USD' },
     { key: 'cdi_brl', label: 'CDI / Nubank (BRL)', moeda: 'BRL' },
-    { key: 'lci_brl', label: 'LCI / RF (BRL)', moeda: 'BRL' },
+    { key: 'lci_brl', label: 'RF Brasil — BB+XP (BRL)', moeda: 'BRL' },
     { key: 'fundo_sar_brl', label: 'Fundo SAR (BRL)', moeda: 'BRL' },
     { key: 'cripto_usd', label: 'Cripto (USD)', moeda: 'USD' },
     { key: 'ouro_usd', label: 'Ouro (USD)', moeda: 'USD' },
