@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react'
 import {
   Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, Line, ComposedChart, Scatter
+  ResponsiveContainer, Legend, Line, ComposedChart
 } from 'recharts'
 import type { ChartDataPoint, SaldoReal } from '../types/database'
 import type { Theme } from '../hooks/useTheme'
@@ -54,8 +54,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     )
   }
 
-  // Match saldos reais to nearest chart point (within 62 days)
-  // Build cumulative real lines: each asset shows accumulated real value
+  // Match saldos reais — cumulative lines per asset
   const merged = data.map((d) => {
     const dDate = new Date(d.data_ref).getTime()
     let closest: SaldoReal | undefined
@@ -68,17 +67,16 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
 
     const point: Record<string, unknown> = { ...d }
     if (hasMatch && closest && showReal) {
-      // Cumulative lines for each asset (stacked from bottom)
       let cum = 0
-      cum += closest.cdi;     point.rc_cdi = cum
-      cum += closest.lci;     point.rc_lci = cum
-      cum += closest.cripto;  point.rc_cripto = cum
-      cum += closest.im2;     point.rc_im2 = cum
-      cum += closest.im1;     point.rc_im1 = cum
+      cum += closest.cdi;       point.rc_cdi = cum
+      cum += closest.lci;       point.rc_lci = cum
+      cum += closest.cripto;    point.rc_cripto = cum
+      cum += closest.im2;       point.rc_im2 = cum
+      cum += closest.im1;       point.rc_im1 = cum
       cum += closest.fundo_sar; point.rc_fundo_sar = cum
-      cum += closest.pension; point.rc_pension = cum
-      cum += closest.savings; point.rc_savings = cum
-      cum += closest.ibkr;    point.rc_ibkr = cum
+      cum += closest.pension;   point.rc_pension = cum
+      cum += closest.savings;   point.rc_savings = cum
+      cum += closest.ibkr;      point.rc_ibkr = cum
       point.real_total = closest.total
     }
     return point
@@ -141,7 +139,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
           />
           <Legend wrapperStyle={{ fontSize: 10, color: theme.textMuted }} />
 
-          {/* Projetado — barras empilhadas normais */}
+          {/* Projetado — barras empilhadas */}
           {STACK_ORDER.map((key) => (
             <Bar key={key} dataKey={key} name={LABELS[key]} stackId="proj" fill={COLORS[key]} fillOpacity={0.85} />
           ))}
@@ -149,32 +147,32 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
           {/* Linha total projetado */}
           <Line type="monotone" dataKey="total" name="Projetado" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} />
 
-          {/* Real — linhas horizontais na cor de cada ativo (acumuladas) */}
+          {/* Real — linhas com losangos pequenos por ativo (acumuladas) */}
           {hasReal && STACK_ORDER.map((key) => (
-            <Scatter
+            <Line
               key={`rc_${key}`}
+              type="monotone"
               dataKey={`rc_${key}`}
-              fill={COLORS[key]}
-              shape={(props: { cx?: number; cy?: number }) => {
-                if (!props.cx || !props.cy) return null
-                const w = 18
-                return (
-                  <line
-                    x1={props.cx - w} y1={props.cy}
-                    x2={props.cx + w} y2={props.cy}
-                    stroke={COLORS[key]}
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                  />
-                )
-              }}
+              stroke={COLORS[key]}
+              strokeWidth={1.5}
+              dot={{ r: 2.5, fill: COLORS[key], strokeWidth: 1, stroke: theme.isDark ? '#000' : '#fff' }}
+              connectNulls={false}
               legendType="none"
             />
           ))}
 
           {/* Losango total real */}
           {hasReal && (
-            <Scatter dataKey="real_total" name="Real" fill="#22d3ee" shape="diamond" legendType="diamond" />
+            <Line
+              type="monotone"
+              dataKey="real_total"
+              name="Real"
+              stroke="#22d3ee"
+              strokeWidth={2}
+              dot={{ r: 4, fill: '#22d3ee', strokeWidth: 1.5, stroke: theme.isDark ? '#000' : '#fff' }}
+              connectNulls={false}
+              legendType="diamond"
+            />
           )}
         </ComposedChart>
       </ResponsiveContainer>

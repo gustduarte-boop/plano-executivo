@@ -25,6 +25,7 @@ import EntradaDados from '../components/EntradaDados'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { usePatrimonio, useAllCenarios, useSaldosReais, usePatrimonioFull } from '../hooks/usePatrimonio'
+import { useComparativo } from '../hooks/useComparativo'
 import type { Plano, Cenario } from '../types/database'
 
 const MARCOS = [
@@ -76,6 +77,27 @@ export default function Dashboard() {
   const patTotal = patLiquido + patIliquido
   const refLabel = hoverPoint ? hoverPoint.mes : 'Dez/2032'
 
+  // Plano mais aderente: compara real vs projeção dos 3 planos
+  const { data: compData } = useComparativo(cenario)
+  const lastReal = saldosReais[saldosReais.length - 1]
+  let planoAderente = '—'
+  if (lastReal && compData.length) {
+    // Find nearest comparativo point to real date
+    const realDate = new Date(lastReal.data_ref).getTime()
+    let nearestComp = compData[0]
+    let minDist = Infinity
+    for (const c of compData) {
+      const dist = Math.abs(new Date(c.data_ref).getTime() - realDate)
+      if (dist < minDist) { minDist = dist; nearestComp = c }
+    }
+    const diffs = [
+      { plano: 'Sprint', diff: Math.abs(nearestComp.sprint - lastReal.total) },
+      { plano: 'Terc. Margem', diff: Math.abs(nearestComp.terceira_margem - lastReal.total) },
+      { plano: 'Master', diff: Math.abs(nearestComp.master - lastReal.total) },
+    ]
+    planoAderente = diffs.sort((a, b) => a.diff - b.diff)[0].plano
+  }
+
   const cenariosDisponiveis = plano === 'terceira_margem'
     ? CENARIOS.filter((c) => c.key !== 'ultra') : CENARIOS
   const planoLabel = PLANOS.find((p) => p.key === plano)?.label || plano
@@ -119,6 +141,12 @@ export default function Dashboard() {
               ))}
             </div>
             <div className="flex-1" />
+            {lastReal && (
+              <div className="rounded-lg px-3 py-1.5 min-w-[90px] text-center" style={{ backgroundColor: theme.isDark ? 'rgba(34,211,238,0.08)' : 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.25)' }}>
+                <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Aderente</div>
+                <div className="text-sm font-bold" style={{ color: '#22d3ee' }}>{planoAderente}</div>
+              </div>
+            )}
             <div className="rounded-lg px-3 py-1.5 min-w-[120px] text-center" style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}>
               <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Total {refLabel}</div>
               <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>{loading ? '...' : fmt(patTotal)}</div>
