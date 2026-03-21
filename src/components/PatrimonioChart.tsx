@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import {
   Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, Line, ComposedChart
+  ResponsiveContainer, Legend, Line, ComposedChart, Customized
 } from 'recharts'
 import type { ChartDataPoint, SaldoReal } from '../types/database'
 import type { Theme } from '../hooks/useTheme'
@@ -36,21 +36,73 @@ interface Props {
   onHover?: (point: HoverPoint | null) => void
 }
 
-// Custom bar shape: translucent fill + solid outline in asset color
+// Overlay component: draws narrow stacked bars for real data on top of the chart
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function NarrowBar(props: any) {
-  const { x, y, width, height, fill } = props
-  if (!height || height <= 0) return null
-  const w = width / 3
-  const xOff = x + (width - w) / 2
-  return (
-    <rect x={xOff} y={y} width={w} height={height} fill={fill} fillOpacity={0.25} stroke={fill} strokeWidth={2} rx={1} />
+function RealOverlay({ formattedGraphicalItems, data, showReal }: any) {
+  if (!showReal || !formattedGraphicalItems?.length) return null
+
+  // Get bar geometry from the first projected bar (cdi)
+  const firstBar = formattedGraphicalItems.find(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (item: any) => item.props?.dataKey === 'cdi'
   )
+  if (!firstBar?.props?.data) return null
+
+  const barItems = firstBar.props.data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const yScale = formattedGraphicalItems[0]?.props?.yAxis?.scale
+  if (!yScale) return null
+
+  const rects: JSX.Element[] = []
+
+  barItems.forEach((bar: { x: number; width: number }, idx: number) => {
+    const d = data[idx]
+    if (!d || d.r_total === undefined) return
+
+    const barX = bar.x
+    const barW = bar.width
+    const narrowW = barW / 3
+    const xOff = barX + (barW - narrowW) / 2
+
+    // Draw stacked segments bottom-up
+    let cumulative = 0
+    for (const key of STACK_ORDER) {
+      const val = d[`r_${key}`] as number
+      if (!val || val <= 0) continue
+
+      const y1 = yScale(cumulative + val)
+      const y0 = yScale(cumulative)
+      const height = y0 - y1
+
+      rects.push(
+        <rect
+          key={`${idx}-${key}`}
+          x={xOff}
+          y={y1}
+          width={narrowW}
+          height={height}
+          fill={COLORS[key]}
+          fillOpacity={0.2}
+          stroke={COLORS[key]}
+          strokeWidth={1.5}
+          rx={1}
+        />
+      )
+      cumulative += val
+    }
+  })
+
+  return <g>{rects}</g>
 }
 
 export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHover }: Props) {
   const lastIndexRef = useRef<number | null>(null)
   const [showReal, setShowReal] = useState(true)
+
+  const handleMouseLeave = useCallback(() => {
+    lastIndexRef.current = null
+    onHover?.(null)
+  }, [onHover])
 
   if (!data.length) {
     return (
@@ -106,11 +158,6 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     onHover({ mes: d.mes, liquido: liq, iliquido: iliq, total: liq + iliq })
   }
 
-  const handleMouseLeave = () => {
-    lastIndexRef.current = null
-    onHover?.(null)
-  }
-
   return (
     <div
       className="rounded-xl p-5"
@@ -145,38 +192,21 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
             formatter={(value, name) => {
               const v = Number(value)
               if (!isFinite(v) || v === 0) return [null, null]
-              const n = String(name)
-              if (n.startsWith('Real ')) return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, `● ${n}`]
-              return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, n]
+              return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, name]
             }}
           />
           <Legend wrapperStyle={{ fontSize: 10, color: theme.textMuted }} />
 
-          {/* Projetado — barras sólidas */}
+          {/* Projetado — barras grossas normais */}
           {STACK_ORDER.map((key) => (
             <Bar key={key} dataKey={key} name={LABELS[key]} stackId="proj" fill={COLORS[key]} fillOpacity={0.85} />
           ))}
 
-          {/* Real — barras sólidas finas sobrepostas (1/3 largura) */}
-          {hasReal && showReal && STACK_ORDER.map((key) => (
-            <Bar
-              key={`r_${key}`}
-              dataKey={`r_${key}`}
-              name={`Real ${LABELS[key]}`}
-              stackId="real"
-              fill={COLORS[key]}
-              shape={<NarrowBar />}
-              legendType="none"
-            />
-          ))}
+          {/* Real — overlay SVG customizado (não afeta layout das barras) */}
+          <Customized component={<RealOverlay data={merged} showReal={showReal} />} />
 
           {/* Linha total projetado */}
           <Line type="monotone" dataKey="total" name="Projetado" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} />
-
-          {/* Linha total real */}
-          {hasReal && showReal && (
-            <Line type="monotone" dataKey="r_total" name="Real Total" stroke="#22d3ee" strokeWidth={2} strokeDasharray="4 2" dot={{ r: 3, fill: '#22d3ee' }} connectNulls={false} />
-          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
