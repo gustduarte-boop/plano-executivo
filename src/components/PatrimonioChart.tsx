@@ -57,14 +57,19 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
   // Match each projected point to nearest real saldo (within 62 days)
   // Real data added as cumulative lines on the same projected points
   const merged = data.map((d) => {
+    // Find saldo that falls within this quarter (data_ref to data_ref + 4 months)
     const dDate = new Date(d.data_ref).getTime()
+    const nextIdx = data.indexOf(d) + 1
+    const nextDate = nextIdx < data.length ? new Date(data[nextIdx].data_ref).getTime() : dDate + 120 * 86400000
     let closest: SaldoReal | undefined
-    let minDist = Infinity
     for (const s of saldosReais) {
-      const dist = Math.abs(new Date(s.data_ref).getTime() - dDate)
-      if (dist < minDist) { minDist = dist; closest = s }
+      const sDate = new Date(s.data_ref).getTime()
+      // Saldo must be >= this quarter start and < next quarter start
+      if (sDate >= dDate && sDate < nextDate) {
+        closest = s // use latest in the quarter
+      }
     }
-    const hasMatch = closest && minDist < 62 * 86400000
+    const hasMatch = !!closest
 
     const point: Record<string, unknown> = { ...d }
     if (hasMatch && closest && showReal) {
