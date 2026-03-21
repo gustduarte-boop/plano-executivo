@@ -108,11 +108,19 @@ export function useSaldosReais() {
       .then(({ data: rows }) => {
         if (!rows) return
         setData(rows.map((r) => {
-          const cambio = r.cambio_usd_brl || 5.80
-          const total = r.ibkr_usd * cambio + r.savings_usd * cambio + r.pension_usd * cambio +
-            r.cdi_brl + r.lci_brl + r.fundo_sar_brl + r.cripto_usd * cambio +
-            r.ouro_usd * cambio + r.im1_valor_brl + r.im2_valor_brl
-          return { mes: dataRefToLabel(r.data_ref), data_ref: r.data_ref, total: total / 1e6 }
+          const c = r.cambio_usd_brl || 5.25
+          const ibkr = r.ibkr_usd * c / 1e6
+          const savings = r.savings_usd * c / 1e6
+          const pension = r.pension_usd * c / 1e6
+          const cdi = r.cdi_brl / 1e6
+          const lci = r.lci_brl / 1e6
+          const fundo_sar = r.fundo_sar_brl / 1e6
+          const cripto = r.cripto_usd * c / 1e6
+          const ouro = r.ouro_usd * c / 1e6
+          const im1 = r.im1_valor_brl / 1e6
+          const im2 = r.im2_valor_brl / 1e6
+          const total = ibkr + savings + pension + cdi + lci + fundo_sar + cripto + ouro + im1 + im2
+          return { mes: dataRefToLabel(r.data_ref), data_ref: r.data_ref, ibkr, savings, pension, cdi, lci, fundo_sar, cripto, ouro, im1, im2, total }
         }))
       })
   }, [])

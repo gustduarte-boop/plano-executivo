@@ -47,16 +47,15 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     )
   }
 
-  // Match saldos reais to nearest chart point (within 2 months)
+  // Match saldos reais to nearest chart point (within 62 days)
   const merged = data.map((d) => {
     const dDate = new Date(d.data_ref).getTime()
-    let closest: typeof saldosReais[0] | undefined
+    let closest: SaldoReal | undefined
     let minDist = Infinity
     for (const s of saldosReais) {
       const dist = Math.abs(new Date(s.data_ref).getTime() - dDate)
       if (dist < minDist) { minDist = dist; closest = s }
     }
-    // Allow match within 62 days (~2 months)
     const real = closest && minDist < 62 * 86400000 ? closest.total : undefined
     return { ...d, real }
   })
@@ -66,7 +65,6 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
   const tooltipBg = theme.isDark ? '#1e293b' : '#ffffff'
   const tooltipBorder = theme.isDark ? '#334155' : '#e2e8f0'
 
-  // Recharts onMouseMove — fires with chart state including activeTooltipIndex
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleChartEvent = (state: any) => {
     if (!onHover) return
@@ -93,11 +91,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     >
       <h2 className="text-sm font-medium mb-4" style={{ color: theme.textMuted }}>{titulo}</h2>
       <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart
-          data={merged}
-          margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-          onMouseMove={handleChartEvent}
-        >
+        <ComposedChart data={merged} margin={{ top: 5, right: 20, left: 10, bottom: 5 }} onMouseMove={handleChartEvent}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
           <YAxis tick={{ fontSize: 10, fill: theme.textFaint }} tickFormatter={(v) => `R$${v.toFixed(1)}M`} domain={[0, 10]} />
@@ -107,14 +101,21 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
             formatter={(value, name) => {
               const v = Number(value)
               if (!isFinite(v)) return [null, null]
+              if (name === 'Real') return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, '● Real']
               return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, name]
             }}
           />
           <Legend wrapperStyle={{ fontSize: 11, color: theme.textMuted }} />
+
+          {/* Barras empilhadas — projetado */}
           {STACK_ORDER.map((key) => (
             <Bar key={key} dataKey={key} name={LABELS[key]} stackId="pat" fill={COLORS[key]} fillOpacity={0.85} />
           ))}
-          <Line type="monotone" dataKey="total" name="Total" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} />
+
+          {/* Linha total projetado */}
+          <Line type="monotone" dataKey="total" name="Projetado" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} />
+
+          {/* Losango real — ponto grande cyan onde houver saldo */}
           {hasReal && (
             <Scatter dataKey="real" name="Real" fill="#22d3ee" shape="diamond" legendType="diamond" />
           )}

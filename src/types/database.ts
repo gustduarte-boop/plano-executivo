@@ -84,5 +84,15 @@ export interface ChartDataPoint {
 export interface SaldoReal {
   mes: string
   data_ref: string
+  ibkr: number
+  savings: number
+  pension: number
+  cdi: number
+  lci: number
+  fundo_sar: number
+  cripto: number
+  ouro: number
+  im1: number
+  im2: number
   total: number
 }
