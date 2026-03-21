@@ -1,7 +1,10 @@
+import type { Theme } from '../hooks/useTheme'
+
 interface CountdownCardProps {
   plano: string
   dataAlvo: Date
   cor: string
+  theme: Theme
 }
 
 function diffParts(target: Date, now: Date) {
@@ -14,35 +17,37 @@ function diffParts(target: Date, now: Date) {
   return { dias, meses: mesesRest, anos, passado: false }
 }
 
-export default function CountdownCard({ plano, dataAlvo, cor }: CountdownCardProps) {
+export default function CountdownCard({ plano, dataAlvo, cor, theme }: CountdownCardProps) {
   const now = new Date()
   const { dias, meses, anos, passado } = diffParts(dataAlvo, now)
-
   const label = dataAlvo.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
 
   return (
-    <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cor }} />
-        <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">{plano}</span>
+    <div
+      className="rounded-lg p-3"
+      style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}
+    >
+      <div className="flex items-center gap-1.5 mb-2">
+        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: cor }} />
+        <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>{plano}</span>
       </div>
       {passado ? (
-        <p className="text-slate-500 text-sm">Saída realizada</p>
+        <p className="text-xs" style={{ color: theme.textFaint }}>Saída realizada</p>
       ) : (
         <>
-          <div className="flex items-baseline gap-1">
+          <div className="flex items-baseline gap-0.5">
             {anos > 0 && (
               <>
-                <span className="text-2xl font-bold text-white">{anos}</span>
-                <span className="text-xs text-slate-400 mr-2">a</span>
+                <span className="text-lg font-bold" style={{ color: theme.text }}>{anos}</span>
+                <span className="text-[10px] mr-1" style={{ color: theme.textFaint }}>a</span>
               </>
             )}
-            <span className="text-2xl font-bold text-white">{meses}</span>
-            <span className="text-xs text-slate-400 mr-2">m</span>
-            <span className="text-2xl font-bold text-white">{dias % 30}</span>
-            <span className="text-xs text-slate-400">d</span>
+            <span className="text-lg font-bold" style={{ color: theme.text }}>{meses}</span>
+            <span className="text-[10px] mr-1" style={{ color: theme.textFaint }}>m</span>
+            <span className="text-lg font-bold" style={{ color: theme.text }}>{dias % 30}</span>
+            <span className="text-[10px]" style={{ color: theme.textFaint }}>d</span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">Saída KAUST {label}</p>
+          <p className="text-[10px] mt-0.5" style={{ color: theme.textFaint }}>Saída KAUST {label}</p>
         </>
       )}
     </div>
