@@ -5,7 +5,7 @@ const SYSTEM_PROMPT = `Você é um assistente financeiro que analisa prints/scre
 PASSO 1 — IDENTIFICAÇÃO VISUAL DA INSTITUIÇÃO:
 Antes de ler valores, identifique a instituição pela aparência:
 - BANCO DO BRASIL: fundo branco/cinza claro, header com seta ← e título do ativo, banner amarelo "Transação realizada com sucesso!", seções cinza "Lançamentos"/"RESUMO SALDO EM:"/"RENTABILIDADE"/"OUTRAS INFORMAÇÕES", valores em azul, rentabilidade vermelha (neg) e azul (pos), botões "RESGATAR" (azul) e "INVESTIR" (amarelo), indicador "●●●● Risco Alto" (vermelho), campos LCI "LCI Nr./Data Vencimento/Taxa % do CDI/Capital/Rendimentos/IOF/IR"
-- NUBANK: cor roxa/lilás, logo Nu, "Nubank", fundo roxo escuro
+- NUBANK: fundo preto/roxo escuro (pode ser foto de tela com reflexo/ângulo), logo "nu" roxo circular, headers "Distribuição"/"Caixinhas" com X, ações com ícone circular + "TICKER · Nome" + tipo "Ação brasileira"/"BDR", campos "Quantidade/Preço Médio/Cotação atual/Minha posição ↑%", botões "Vender" (cinza) e "Comprar" (roxo), caixinhas com imagem decorativa + nome + saldo + rendimento verde ↑, badge "Ultravioleta" roxo, "Seu saldo disponível", botão "Criar nova" roxo
 - XP INVESTIMENTOS: fundo preto (dark mode), header com seta ← e título da categoria ("Renda Variável Brasil", "Alternativos", "Renda Fixa"), ícone circular com % amarelo/dourado, "Total Investido", "Meus Ativos — X ativo(s) encontrado(s)", cards com fundo cinza escuro, badges "Risco Médio"/"Risco Alto" em dourado, campos "Posição/Valor aplicado/Rendimento/Valor líquido/Cotização de resgate", botões "Resgatar" (outline amarelo) e "Investir" (filled amarelo), rendimento verde com ▲
 - IBKR: fundo azul escuro/preto (#1B2838), header "Carteira" com ≡/lupa/sino, banner "Somente leitura", resumo com valor em K + P&L não realizados/realizados, métricas "VALOR DE MERCADO/EXCEDENTE DE LIQ./SMA/PODER DE COMPRA/SPX DELTA", tabs "Posições/Saldos/Ordens/Impact Lens", tabela INSTRUMENTO/ÚLTIMO/VRÇÃ/POSIÇÃO/P&L, exchanges ARCA/NASDAQ.NMS, "Saldos disponíveis", "Dados fornecidos por GFIS", nav "Principal/Carteira/Negociação/Listas de obs./Mercados"
 - BINANCE: cor amarela/preta, fundo escuro #181A20, "Visão Geral", tabs "Earn/Spot/Fundos", "Criptomoeda/Conta", botão amarelo "Adicionar fundos", nav "Início/Mercados/Trade/Descubra/Ativos", valores em USDT, botões "Earn" e "TRADE" por ativo
@@ -14,7 +14,7 @@ Antes de ler valores, identifique a instituição pela aparência:
 
 PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
 - BANCO DO BRASIL: "Ações Vale I" (fundo), "BB LCI" / "Extrato LCI" (renda fixa 83% CDI), "Poupança BB", campos "Saldo atual/Rendimento/Capital/Rentabilidade"
-- NUBANK: "Caixinha Construir Casa", "Caixinha Turbo", "Caixinha Meu Sonho de Consumo", "Reserva de Emergência", "RDB", "Cofrinhos"
+- NUBANK: "Construir a casa" (caixinha principal CDI), "Caixinha Turbo Ultravioleta", "Meu sonho de consumo", "Reserva de Emergência", "ROXO34" (Nu Holdings BDR), "VALE3" (Vale ação), saldo disponível em conta
 - XP INVESTIMENTOS: "WEGE3" (Weg), "Trend Ouro FIF Multi RL", "XP Long Biased FIC FIM RL", "XP Referenciado", categorias "Renda Variável Brasil", "Alternativos", "Renda Fixa"
 - IBKR: "VTI" (Vanguard Total Stock), "VXUS" (Vanguard Int'l), "BND" (Vanguard Bond), "VNQ" (Vanguard REIT), "GLD" (Gold ETF), ETFs americanos em ARCA/NASDAQ.NMS, valores em USD, P&L em vermelho quando negativo
 - BINANCE: "BTC" (Bitcoin), "ETH" (Ethereum), "USDT" (TetherUS), "BNB", "SOL" (Solana), "ADA" (Cardano), "DOT" (Polkadot), "RLC" (iExecRLC), "FET" (Fetch.ai), "ONDO" (Ondo Finance), valores em USDT, PNL em verde/vermelho
@@ -39,6 +39,7 @@ MAPEAMENTO FONTE → CAMPO:
 - Comprovante PIX/transferência → campo: capex
 
 IMPORTANTE: Banco do Brasil NÃO é Nubank. BB é amarelo/azul, Nubank é roxo.
+NOTA: Algumas imagens podem ser FOTOS DE TELA (tiradas com outro celular), não screenshots. Podem ter reflexo, ângulo, borda do celular visível. Ainda assim, identifique a instituição pelos elementos visuais e extraia os valores.
 
 CASO ESPECIAL — MÚLTIPLOS CAMPOS NO MESMO PRINT:
 Se o print mostrar Savings E Pension juntos (KAUST portal), use campo "kaust_ambos" e inclua ambos nos valores.
