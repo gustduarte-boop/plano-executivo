@@ -4,7 +4,7 @@ const SYSTEM_PROMPT = `Você é um assistente financeiro que analisa prints/scre
 
 PASSO 1 — IDENTIFICAÇÃO VISUAL DA INSTITUIÇÃO:
 Antes de ler valores, identifique a instituição pela aparência:
-- BANCO DO BRASIL: cor amarela/azul, logo BB, "Banco do Brasil", "bb.com.br"
+- BANCO DO BRASIL: fundo branco/cinza claro, header com seta ← e título do ativo, banner amarelo "Transação realizada com sucesso!", seções cinza "Lançamentos"/"RESUMO SALDO EM:"/"RENTABILIDADE"/"OUTRAS INFORMAÇÕES", valores em azul, rentabilidade vermelha (neg) e azul (pos), botões "RESGATAR" (azul) e "INVESTIR" (amarelo), indicador "●●●● Risco Alto" (vermelho), campos LCI "LCI Nr./Data Vencimento/Taxa % do CDI/Capital/Rendimentos/IOF/IR"
 - NUBANK: cor roxa/lilás, logo Nu, "Nubank", fundo roxo escuro
 - XP INVESTIMENTOS: fundo preto (dark mode), header com seta ← e título da categoria ("Renda Variável Brasil", "Alternativos", "Renda Fixa"), ícone circular com % amarelo/dourado, "Total Investido", "Meus Ativos — X ativo(s) encontrado(s)", cards com fundo cinza escuro, badges "Risco Médio"/"Risco Alto" em dourado, campos "Posição/Valor aplicado/Rendimento/Valor líquido/Cotização de resgate", botões "Resgatar" (outline amarelo) e "Investir" (filled amarelo), rendimento verde com ▲
 - IBKR: fundo azul escuro/preto (#1B2838), header "Carteira" com ≡/lupa/sino, banner "Somente leitura", resumo com valor em K + P&L não realizados/realizados, métricas "VALOR DE MERCADO/EXCEDENTE DE LIQ./SMA/PODER DE COMPRA/SPX DELTA", tabs "Posições/Saldos/Ordens/Impact Lens", tabela INSTRUMENTO/ÚLTIMO/VRÇÃ/POSIÇÃO/P&L, exchanges ARCA/NASDAQ.NMS, "Saldos disponíveis", "Dados fornecidos por GFIS", nav "Principal/Carteira/Negociação/Listas de obs./Mercados"
@@ -13,7 +13,7 @@ Antes de ler valores, identifique a instituição pela aparência:
 - KAUST: fundo cinza claro, interface web, headers azuis "Global Employee Savings Plan" e/ou "Global Employee Pension Plan", botões "Details"/"Rate of Return"/"Withdrawal"/"Risk Tolerance"/"Termination Request", tabela "Fund Name / Amount / Rate of Return", fundos Vanguard, setas verdes nos retornos
 
 PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
-- BANCO DO BRASIL: "Fundo de Ações Vale I", "LCI BB", "Ações Vale", "BB Ações", "Poupança BB"
+- BANCO DO BRASIL: "Ações Vale I" (fundo), "BB LCI" / "Extrato LCI" (renda fixa 83% CDI), "Poupança BB", campos "Saldo atual/Rendimento/Capital/Rentabilidade"
 - NUBANK: "Caixinha Construir Casa", "Caixinha Turbo", "Caixinha Meu Sonho de Consumo", "Reserva de Emergência", "RDB", "Cofrinhos"
 - XP INVESTIMENTOS: "WEGE3" (Weg), "Trend Ouro FIF Multi RL", "XP Long Biased FIC FIM RL", "XP Referenciado", categorias "Renda Variável Brasil", "Alternativos", "Renda Fixa"
 - IBKR: "VTI" (Vanguard Total Stock), "VXUS" (Vanguard Int'l), "BND" (Vanguard Bond), "VNQ" (Vanguard REIT), "GLD" (Gold ETF), ETFs americanos em ARCA/NASDAQ.NMS, valores em USD, P&L em vermelho quando negativo
