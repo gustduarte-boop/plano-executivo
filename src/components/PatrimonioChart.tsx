@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react'
 import {
   Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, Line, BarChart
+  ResponsiveContainer, Legend, Line, ComposedChart, Scatter
 } from 'recharts'
 import type { ChartDataPoint, SaldoReal } from '../types/database'
 import type { Theme } from '../hooks/useTheme'
@@ -36,39 +36,6 @@ interface Props {
   onHover?: (point: HoverPoint | null) => void
 }
 
-// Determines which third of the quarter bar the real month falls in
-// data_ref is the projected quarter start (e.g. 2026-01-01)
-// saldo data_ref is the real month (e.g. 2026-03-01)
-// Returns 0 (1st third), 1 (2nd), or 2 (3rd)
-function getMonthOffset(projDate: string, realDate: string): number {
-  const pMonth = parseInt(projDate.split('-')[1])
-  const rMonth = parseInt(realDate.split('-')[1])
-  const diff = ((rMonth - pMonth) + 12) % 12
-  return Math.min(diff, 2) // 0, 1, or 2
-}
-
-// Custom shape: positions the bar in the correct 1/3 section
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function PositionedRealBar(props: any) {
-  const { x, y, width, height, fill, monthOffset } = props
-  if (!height || height <= 0 || !width) return null
-  const thirdW = width / 3
-  const xPos = x + thirdW * (monthOffset ?? 2)
-  return (
-    <rect
-      x={xPos}
-      y={y}
-      width={thirdW}
-      height={height}
-      fill={fill}
-      fillOpacity={0.3}
-      stroke={fill}
-      strokeWidth={1.5}
-      rx={1}
-    />
-  )
-}
-
 export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHover }: Props) {
   const lastIndexRef = useRef<number | null>(null)
   const [showReal, setShowReal] = useState(true)
@@ -88,6 +55,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
   }
 
   // Match saldos reais to nearest chart point (within 62 days)
+  // Build cumulative real lines: each asset shows accumulated real value
   const merged = data.map((d) => {
     const dDate = new Date(d.data_ref).getTime()
     let closest: SaldoReal | undefined
@@ -100,23 +68,23 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
 
     const point: Record<string, unknown> = { ...d }
     if (hasMatch && closest && showReal) {
-      point.r_cdi = closest.cdi
-      point.r_lci = closest.lci
-      point.r_cripto = closest.cripto
-      point.r_im2 = closest.im2
-      point.r_im1 = closest.im1
-      point.r_fundo_sar = closest.fundo_sar
-      point.r_pension = closest.pension
-      point.r_savings = closest.savings
-      point.r_ibkr = closest.ibkr
-      // Store offset for positioning (which third of the bar)
-      point._monthOffset = getMonthOffset(d.data_ref, closest.data_ref)
-      point._realDataRef = closest.data_ref
+      // Cumulative lines for each asset (stacked from bottom)
+      let cum = 0
+      cum += closest.cdi;     point.rc_cdi = cum
+      cum += closest.lci;     point.rc_lci = cum
+      cum += closest.cripto;  point.rc_cripto = cum
+      cum += closest.im2;     point.rc_im2 = cum
+      cum += closest.im1;     point.rc_im1 = cum
+      cum += closest.fundo_sar; point.rc_fundo_sar = cum
+      cum += closest.pension; point.rc_pension = cum
+      cum += closest.savings; point.rc_savings = cum
+      cum += closest.ibkr;    point.rc_ibkr = cum
+      point.real_total = closest.total
     }
     return point
   })
 
-  const hasReal = merged.some((d) => d.r_ibkr !== undefined)
+  const hasReal = merged.some((d) => d.real_total !== undefined)
 
   const tooltipBg = theme.isDark ? '#1e293b' : '#ffffff'
   const tooltipBorder = theme.isDark ? '#334155' : '#e2e8f0'
@@ -133,9 +101,6 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     const iliq = (d.im1 + d.im2) * 1e6
     onHover({ mes: d.mes, liquido: liq, iliquido: iliq, total: liq + iliq })
   }
-
-  // Get the month offset for custom shape rendering
-  const monthOffsets = merged.map((d) => (d._monthOffset as number) ?? 2)
 
   return (
     <div
@@ -161,12 +126,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
         )}
       </div>
       <ResponsiveContainer width="100%" height={400}>
-        <BarChart
-          data={merged}
-          margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-          onMouseMove={handleChartEvent}
-          barCategoryGap="5%"
-        >
+        <ComposedChart data={merged} margin={{ top: 5, right: 20, left: 10, bottom: 5 }} onMouseMove={handleChartEvent}>
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
           <YAxis tick={{ fontSize: 10, fill: theme.textFaint }} tickFormatter={(v) => `R$${v.toFixed(1)}M`} domain={[0, 10]} />
@@ -176,37 +136,47 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
             formatter={(value, name) => {
               const v = Number(value)
               if (!isFinite(v) || v === 0) return [null, null]
-              const n = String(name)
-              const label = n.startsWith('R:') ? n : (LABELS[n] || n)
-              return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, label]
+              return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, name]
             }}
           />
           <Legend wrapperStyle={{ fontSize: 10, color: theme.textMuted }} />
 
-          {/* Projetado — barras largas */}
+          {/* Projetado — barras empilhadas normais */}
           {STACK_ORDER.map((key) => (
             <Bar key={key} dataKey={key} name={LABELS[key]} stackId="proj" fill={COLORS[key]} fillOpacity={0.85} />
           ))}
 
-          {/* Real — barras com shape customizado posicionado no terço correto */}
+          {/* Linha total projetado */}
+          <Line type="monotone" dataKey="total" name="Projetado" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} />
+
+          {/* Real — linhas horizontais na cor de cada ativo (acumuladas) */}
           {hasReal && STACK_ORDER.map((key) => (
-            <Bar
-              key={`r_${key}`}
-              dataKey={`r_${key}`}
-              name={`R:${LABELS[key]}`}
-              stackId="real"
+            <Scatter
+              key={`rc_${key}`}
+              dataKey={`rc_${key}`}
               fill={COLORS[key]}
-              legendType="none"
-              shape={(props: Record<string, unknown>) => {
-                const idx = props.index as number
-                return <PositionedRealBar {...props} monthOffset={monthOffsets[idx ?? 0]} />
+              shape={(props: { cx?: number; cy?: number }) => {
+                if (!props.cx || !props.cy) return null
+                const w = 18
+                return (
+                  <line
+                    x1={props.cx - w} y1={props.cy}
+                    x2={props.cx + w} y2={props.cy}
+                    stroke={COLORS[key]}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                  />
+                )
               }}
+              legendType="none"
             />
           ))}
 
-          {/* Linha total projetado */}
-          <Line type="monotone" dataKey="total" name="Projetado" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} />
-        </BarChart>
+          {/* Losango total real */}
+          {hasReal && (
+            <Scatter dataKey="real_total" name="Real" fill="#22d3ee" shape="diamond" legendType="diamond" />
+          )}
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   )
