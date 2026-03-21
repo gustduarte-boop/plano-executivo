@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import {
   Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Line, ComposedChart, Scatter
@@ -35,52 +35,12 @@ interface Props {
   onHover?: (point: HoverPoint | null) => void
 }
 
-// Custom tooltip that also fires onHover callback
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label, theme, onHoverRef }: any) {
-  useEffect(() => {
-    if (active && payload?.length && onHoverRef.current) {
-      const d = payload[0]?.payload as ChartDataPoint
-      if (d) {
-        const liq = (d.ibkr + d.savings + d.pension + d.cdi + d.lci + d.fundo_sar + d.cripto + d.ouro) * 1e6
-        const iliq = (d.im1 + d.im2) * 1e6
-        onHoverRef.current({ mes: d.mes, liquido: liq, iliquido: iliq, total: liq + iliq })
-      }
-    } else if (!active && onHoverRef.current) {
-      onHoverRef.current(null)
-    }
-  }, [active, payload, onHoverRef])
-
-  if (!active || !payload?.length) return null
-
-  const tooltipBg = theme.isDark ? '#1e293b' : '#ffffff'
-  const tooltipBorder = theme.isDark ? '#334155' : '#e2e8f0'
-
-  return (
-    <div style={{
-      backgroundColor: tooltipBg,
-      border: `1px solid ${tooltipBorder}`,
-      borderRadius: 8,
-      padding: '8px 12px',
-      fontSize: 12,
-    }}>
-      <p style={{ color: theme.text, fontWeight: 600, marginBottom: 4 }}>{label}</p>
-      {payload
-        .filter((p: { value: number }) => isFinite(p.value) && p.value !== 0)
-        .map((p: { name: string; value: number; color: string }) => (
-          <p key={p.name} style={{ color: p.color, margin: '1px 0' }}>
-            {p.name}: R$ {(p.value * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-          </p>
-        ))}
-    </div>
-  )
-}
-
 export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHover }: Props) {
-  const onHoverRef = useRef(onHover)
-  onHoverRef.current = onHover
+  // Track last hovered mes to avoid firing onHover repeatedly for same point
+  const lastHoveredRef = useRef<string | null>(null)
 
   const handleMouseLeave = useCallback(() => {
+    lastHoveredRef.current = null
     onHover?.(null)
   }, [onHover])
 
@@ -100,6 +60,48 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
 
   const hasReal = merged.some((d) => d.real !== undefined)
 
+  const tooltipBg = theme.isDark ? '#1e293b' : '#ffffff'
+  const tooltipBorder = theme.isDark ? '#334155' : '#e2e8f0'
+
+  // Custom tooltip content — fires onHover without useEffect to avoid re-render loops
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderTooltip = (props: any) => {
+    const { active, payload, label } = props
+
+    // Fire hover callback synchronously during render (via ref to avoid loop)
+    if (active && payload?.length && onHover) {
+      const d = payload[0]?.payload as ChartDataPoint
+      if (d && lastHoveredRef.current !== d.mes) {
+        lastHoveredRef.current = d.mes
+        const liq = (d.ibkr + d.savings + d.pension + d.cdi + d.lci + d.fundo_sar + d.cripto + d.ouro) * 1e6
+        const iliq = (d.im1 + d.im2) * 1e6
+        // Schedule the state update to avoid updating parent during render
+        setTimeout(() => onHover({ mes: d.mes, liquido: liq, iliquido: iliq, total: liq + iliq }), 0)
+      }
+    }
+
+    if (!active || !payload?.length) return null
+
+    return (
+      <div style={{
+        backgroundColor: tooltipBg,
+        border: `1px solid ${tooltipBorder}`,
+        borderRadius: 8,
+        padding: '8px 12px',
+        fontSize: 12,
+      }}>
+        <p style={{ color: theme.text, fontWeight: 600, marginBottom: 4 }}>{label}</p>
+        {payload
+          .filter((p: { value: number }) => isFinite(p.value) && p.value !== 0)
+          .map((p: { name: string; value: number; color: string }) => (
+            <p key={p.name} style={{ color: p.color, margin: '1px 0' }}>
+              {p.name}: R$ {(p.value * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+            </p>
+          ))}
+      </div>
+    )
+  }
+
   return (
     <div
       className="rounded-xl p-5"
@@ -112,7 +114,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
           <YAxis tick={{ fontSize: 10, fill: theme.textFaint }} tickFormatter={(v) => `R$${v.toFixed(1)}M`} />
-          <Tooltip content={<CustomTooltip theme={theme} onHoverRef={onHoverRef} />} />
+          <Tooltip content={renderTooltip} />
           <Legend wrapperStyle={{ fontSize: 11, color: theme.textMuted }} />
           {STACK_ORDER.map((key) => (
             <Bar key={key} dataKey={key} name={LABELS[key]} stackId="pat" fill={COLORS[key]} fillOpacity={0.85} />
