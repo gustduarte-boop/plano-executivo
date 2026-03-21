@@ -8,23 +8,24 @@ Antes de ler valores, identifique a instituição pela aparência:
 - NUBANK: cor roxa/lilás, logo Nu, "Nubank", fundo roxo escuro
 - XP INVESTIMENTOS: cor laranja/preta, logo XP, "XP Inc", "xpi.com.br"
 - IBKR: cor vermelha/branca, "Interactive Brokers", "IBKR", interface de trading
-- BINANCE: cor amarela/preta, logo Binance, interface cripto, preços em USDT
+- BINANCE: cor amarela/preta, fundo escuro #181A20, "Visão Geral", tabs "Earn/Spot/Fundos", "Criptomoeda/Conta", botão amarelo "Adicionar fundos", nav "Início/Mercados/Trade/Descubra/Ativos", valores em USDT, botões "Earn" e "TRADE" por ativo
 - SABB: logo SABB, "Saudi British Bank", texto em árabe, valores em SAR
 - KAUST: logo KAUST, "King Abdullah University", portal de benefícios
 
 PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
-Use estes nomes de ativos para confirmar a instituição:
-- BANCO DO BRASIL: "Fundo de Ações Vale I", "LCI BB", "Ações Vale", "BB Ações", "Poupança BB", fundos BB
+- BANCO DO BRASIL: "Fundo de Ações Vale I", "LCI BB", "Ações Vale", "BB Ações", "Poupança BB"
 - NUBANK: "Caixinha Construir Casa", "Caixinha Turbo", "Caixinha Meu Sonho de Consumo", "Reserva de Emergência", "RDB", "Cofrinhos"
-- XP INVESTIMENTOS: "WEGE3", "Trend Ouro FIF", "XP Long Biased", "XP Referenciado", ações brasileiras
+- XP INVESTIMENTOS: "WEGE3", "Trend Ouro FIF", "XP Long Biased", "XP Referenciado"
 - IBKR: "VTI", "VXUS", "BND", "VNQ", "GLD", ETFs americanos, valores em USD
-- BINANCE: "BTC", "ETH", "BNB", "SOL", "ADA", "DOT", "RLC", "USDT", spot/futures
-- SABB: "Commodity Investment Account", fundo SAR, valores em riyals/SAR
-- KAUST Savings: "Savings Plan", "Employee Savings", contribuição mensal USD
-- KAUST Pension: "Pension Plan", "Retirement Plan", vesting USD
+- BINANCE: "BTC" (Bitcoin), "ETH" (Ethereum), "USDT" (TetherUS), "BNB", "SOL" (Solana), "ADA" (Cardano), "DOT" (Polkadot), "RLC" (iExecRLC), valores em USDT, PNL em verde/vermelho
+- SABB: "Commodity Investment Account", fundo SAR
+- KAUST Savings: "Savings Plan", "Employee Savings"
+- KAUST Pension: "Pension Plan", "Retirement Plan"
 
 PASSO 3 — EXTRAIR VALORES:
-Extraia TODOS os valores monetários visíveis com suas moedas.
+Extraia CADA ATIVO INDIVIDUAL com seu valor. Para Binance/cripto, liste cada moeda separadamente.
+Se receber múltiplas imagens, consolide todos os ativos de todas as imagens (sem duplicar).
+O valor_principal deve ser o TOTAL SOMADO de todos os ativos.
 
 MAPEAMENTO FONTE → CAMPO:
 - Banco do Brasil → campo: lci_brl (moeda: BRL)
@@ -33,22 +34,22 @@ MAPEAMENTO FONTE → CAMPO:
 - IBKR / Interactive Brokers → campo: ibkr_usd (moeda: USD)
 - KAUST Savings → campo: savings_usd (moeda: USD)
 - KAUST Pension → campo: pension_usd (moeda: USD)
-- SABB → campo: fundo_sar_brl (moeda: BRL, converter de SAR se necessário)
+- SABB → campo: fundo_sar_brl (moeda: BRL)
 - Binance / cripto → campo: cripto_usd (moeda: USD/USDT)
 - Comprovante PIX/transferência → campo: capex
 
-IMPORTANTE: Banco do Brasil NÃO é Nubank. São instituições completamente diferentes. BB é amarelo/azul, Nubank é roxo.
+IMPORTANTE: Banco do Brasil NÃO é Nubank. BB é amarelo/azul, Nubank é roxo.
 
-Retorne APENAS um JSON válido com esta estrutura:
+Retorne APENAS um JSON válido:
 {
-  "fonte": "nome exato da instituição identificada",
-  "campo": "campo do sistema (ibkr_usd, savings_usd, pension_usd, cdi_brl, lci_brl, fundo_sar_brl, cripto_usd, ouro_usd, capex, desconhecido)",
-  "valores": [{"descricao": "nome do ativo/conta", "valor": 12345.67, "moeda": "BRL"}],
+  "fonte": "nome exato da instituição",
+  "campo": "campo do sistema",
+  "valores": [{"descricao": "nome do ativo", "valor": 12345.67, "moeda": "USDT"}],
   "valor_principal": 12345.67,
-  "moeda": "BRL",
-  "data_ref": "2026-03-15 ou null se não visível",
+  "moeda": "USDT",
+  "data_ref": "2026-03-15 ou null",
   "confianca": "alta/media/baixa",
-  "observacao": "elementos visuais usados na identificação (cor, logo, nomes de ativos)"
+  "observacao": "elementos visuais usados na identificação"
 }`
 
 export interface AnalysisResult {
@@ -63,12 +64,8 @@ export interface AnalysisResult {
   error?: string
 }
 
-export async function analyzeDocument(file: File): Promise<AnalysisResult> {
-  console.log('[AI] Starting analysis for', file.name, file.type, file.size, 'bytes')
-
-  const base64 = await fileToBase64(file)
-  const mediaType = file.type || 'image/png'
-  console.log('[AI] Base64 ready, length:', base64.length)
+export async function analyzeDocuments(files: File[]): Promise<AnalysisResult> {
+  console.log('[AI] Starting analysis for', files.length, 'file(s)')
 
   if (!ANTHROPIC_KEY) {
     console.log('[AI] No API key configured')
@@ -80,7 +77,25 @@ export async function analyzeDocument(file: File): Promise<AnalysisResult> {
     }
   }
 
-  console.log('[AI] Calling Anthropic API...')
+  // Build content array with all images
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const content: any[] = []
+  for (const file of files) {
+    console.log('[AI] Processing', file.name, file.size, 'bytes')
+    const base64 = await fileToBase64(file)
+    content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: file.type || 'image/png', data: base64 },
+    })
+  }
+  content.push({
+    type: 'text',
+    text: files.length > 1
+      ? `Estas ${files.length} imagens são prints da MESMA instituição/conta. Consolide todos os ativos visíveis em todas as imagens (sem duplicar). Retorne um único JSON com o total.`
+      : 'Analise esta imagem e extraia as informações financeiras.',
+  })
+
+  console.log('[AI] Calling Anthropic API with', content.length - 1, 'image(s)...')
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -92,21 +107,14 @@ export async function analyzeDocument(file: File): Promise<AnalysisResult> {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
+        max_tokens: 2048,
         system: SYSTEM_PROMPT,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: 'Analise esta imagem e extraia as informações financeiras.' },
-          ],
-        }],
+        messages: [{ role: 'user', content }],
       }),
     })
 
     console.log('[AI] Response status:', resp.status)
     const result = await resp.json()
-    console.log('[AI] Response body:', JSON.stringify(result).substring(0, 300))
 
     if (!resp.ok) {
       return {
@@ -118,12 +126,12 @@ export async function analyzeDocument(file: File): Promise<AnalysisResult> {
     }
 
     const text = result.content?.[0]?.text || ''
-    console.log('[AI] Extracted text:', text.substring(0, 200))
+    console.log('[AI] Response text:', text.substring(0, 300))
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0])
-      console.log('[AI] Parsed result:', parsed)
+      console.log('[AI] Parsed:', parsed.fonte, '—', parsed.valores?.length, 'valores, total:', parsed.valor_principal)
       return parsed
     }
 

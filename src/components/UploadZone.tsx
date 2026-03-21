@@ -4,26 +4,26 @@ import type { Theme } from '../hooks/useTheme'
 
 interface Props {
   theme: Theme
-  onFile: (file: File) => void
+  onFiles: (files: File[]) => void
   analyzing: boolean
 }
 
 const ACCEPT = '.jpg,.jpeg,.png,.pdf,image/*'
 
-export default function UploadZone({ theme, onFile, analyzing }: Props) {
+export default function UploadZone({ theme, onFiles, analyzing }: Props) {
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault()
     setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) onFile(file)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length) onFiles(files)
   }
 
   const handleSelect = () => {
-    const file = inputRef.current?.files?.[0]
-    if (file) onFile(file)
+    const files = Array.from(inputRef.current?.files || [])
+    if (files.length) onFiles(files)
   }
 
   return (
@@ -38,7 +38,7 @@ export default function UploadZone({ theme, onFile, analyzing }: Props) {
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
     >
-      <input ref={inputRef} type="file" accept={ACCEPT} className="hidden" onChange={handleSelect} />
+      <input ref={inputRef} type="file" accept={ACCEPT} multiple className="hidden" onChange={handleSelect} />
       {analyzing ? (
         <div className="flex flex-col items-center gap-2">
           <Loader2 size={24} className="animate-spin" style={{ color: theme.accent }} />
@@ -48,9 +48,9 @@ export default function UploadZone({ theme, onFile, analyzing }: Props) {
         <div className="flex flex-col items-center gap-2">
           <Upload size={24} style={{ color: theme.textFaint }} />
           <span className="text-xs" style={{ color: theme.textMuted }}>
-            Arraste um print ou <span style={{ color: theme.accent }}>clique para selecionar</span>
+            Arraste prints ou <span style={{ color: theme.accent }}>clique para selecionar</span>
           </span>
-          <span className="text-[10px]" style={{ color: theme.textFaint }}>JPG, PNG, PDF — extrato, screenshot, comprovante</span>
+          <span className="text-[10px]" style={{ color: theme.textFaint }}>JPG, PNG, PDF — múltiplos arquivos permitidos</span>
         </div>
       )}
     </div>

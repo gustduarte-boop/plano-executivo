@@ -4,7 +4,7 @@ import type { Theme } from '../hooks/useTheme'
 import UploadZone from './UploadZone'
 import SaldoForm from './SaldoForm'
 import CapexForm from './CapexForm'
-import { analyzeDocument, type AnalysisResult } from '../lib/analyzeDocument'
+import { analyzeDocuments, type AnalysisResult } from '../lib/analyzeDocument'
 
 interface Props {
   theme: Theme
@@ -15,14 +15,14 @@ export default function EntradaDados({ theme, onClose }: Props) {
   const [tab, setTab] = useState<'saldo' | 'capex'>('saldo')
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
+  const [previews, setPreviews] = useState<string[]>([])
 
-  const handleFile = async (file: File) => {
-    setPreview(URL.createObjectURL(file))
+  const handleFiles = async (files: File[]) => {
+    setPreviews(files.map((f) => URL.createObjectURL(f)))
     setAnalyzing(true)
     setAnalysis(null)
     try {
-      const result = await analyzeDocument(file)
+      const result = await analyzeDocuments(files)
       setAnalysis(result)
       if (result.campo === 'capex') setTab('capex')
       else setTab('saldo')
@@ -56,7 +56,7 @@ export default function EntradaDados({ theme, onClose }: Props) {
 
         <div className="p-5 space-y-4">
           {/* Upload */}
-          <UploadZone theme={theme} onFile={handleFile} analyzing={analyzing} />
+          <UploadZone theme={theme} onFiles={handleFiles} analyzing={analyzing} />
 
           {/* AI Result */}
           {analysis && !analysis.error && (
@@ -75,6 +75,10 @@ export default function EntradaDados({ theme, onClose }: Props) {
                   <span className="font-medium tabular-nums">{v.moeda} {v.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
               ))}
+              <div className="mt-2 pt-2 flex justify-between text-xs font-bold" style={{ borderTop: `1px solid ${theme.surfaceBorder}`, color: theme.accent }}>
+                <span>TOTAL</span>
+                <span className="tabular-nums">{analysis.moeda} {analysis.valor_principal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </div>
               {analysis.observacao && (
                 <p className="text-[10px] mt-1 italic" style={{ color: theme.textFaint }}>{analysis.observacao}</p>
               )}
@@ -89,10 +93,14 @@ export default function EntradaDados({ theme, onClose }: Props) {
             </div>
           )}
 
-          {/* Preview */}
-          {preview && (
-            <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${theme.surfaceBorder}` }}>
-              <img src={preview} alt="Preview" className="w-full max-h-48 object-contain" style={{ backgroundColor: theme.isDark ? '#000' : '#f1f5f9' }} />
+          {/* Previews */}
+          {previews.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto">
+              {previews.map((src, i) => (
+                <img key={i} src={src} alt={`Preview ${i + 1}`}
+                  className="rounded-lg h-32 object-contain flex-none"
+                  style={{ backgroundColor: theme.isDark ? '#000' : '#f1f5f9', border: `1px solid ${theme.surfaceBorder}` }} />
+              ))}
             </div>
           )}
 
