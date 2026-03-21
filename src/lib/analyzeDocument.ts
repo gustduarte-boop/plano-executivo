@@ -17,7 +17,7 @@ PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
 - NUBANK: "Caixinha Construir Casa", "Caixinha Turbo", "Caixinha Meu Sonho de Consumo", "Reserva de Emergência", "RDB", "Cofrinhos"
 - XP INVESTIMENTOS: "WEGE3", "Trend Ouro FIF", "XP Long Biased", "XP Referenciado"
 - IBKR: "VTI", "VXUS", "BND", "VNQ", "GLD", ETFs americanos, valores em USD
-- BINANCE: "BTC" (Bitcoin), "ETH" (Ethereum), "USDT" (TetherUS), "BNB", "SOL" (Solana), "ADA" (Cardano), "DOT" (Polkadot), "RLC" (iExecRLC), valores em USDT, PNL em verde/vermelho
+- BINANCE: "BTC" (Bitcoin), "ETH" (Ethereum), "USDT" (TetherUS), "BNB", "SOL" (Solana), "ADA" (Cardano), "DOT" (Polkadot), "RLC" (iExecRLC), "FET" (Fetch.ai), "ONDO" (Ondo Finance), valores em USDT, PNL em verde/vermelho
 - SABB: "Commodity Investment Account", fundo SAR
 - KAUST Savings: "Savings Plan", "Employee Savings"
 - KAUST Pension: "Pension Plan", "Retirement Plan"
