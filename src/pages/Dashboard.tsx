@@ -141,10 +141,8 @@ export default function Dashboard() {
         <SectionCarousel
           labels={[
             'Evolução', 'LCI/RF', 'Valorização', 'Comparativo', 'Cobertura',
-            'Im.1', 'Im.2', 'Sensibilidade',
-            'Monte Carlo', 'Stress+Cisne', 'Salariais F2',
-            'Síntese', 'Patrimonial', 'Renda Disp.',
-            'Premissas', 'Fotografia', 'Metodologia',
+            'Imóveis', 'Risco', 'Stress', 'Salariais',
+            'Síntese', 'Detalhado', 'Referência',
           ]}
           theme={theme}
         >
@@ -156,21 +154,29 @@ export default function Dashboard() {
             <ComparativoTable cenario={cenario} theme={theme} />
           </div>
           <CoberturaChart data={chartData} plano={plano} theme={theme} />
-          <Im1Benchmark theme={theme} />
-          <Im2Maturacao plano={plano} theme={theme} />
-          <SensibilidadeHeatmap plano={plano} theme={theme} />
-          <MonteCarloChart plano={plano} theme={theme} />
+          <div className="space-y-4">
+            <Im1Benchmark theme={theme} />
+            <Im2Maturacao plano={plano} theme={theme} />
+          </div>
+          <div className="space-y-4">
+            <MonteCarloChart plano={plano} theme={theme} />
+            <SensibilidadeHeatmap plano={plano} theme={theme} />
+          </div>
           <div className="space-y-4">
             <StressTestChart plano={plano} theme={theme} />
             <CisneNegroChart plano={plano} theme={theme} />
           </div>
           <CenariosSalariaisChart plano={plano} theme={theme} />
           <SinteseTable theme={theme} />
-          <TabelaPatrimonial data={fullData} theme={theme} />
-          <TabelaRendaDisponivel plano={plano} cenario={cenario} theme={theme} />
-          <PremissasTable theme={theme} />
-          <FotografiaPatrimonial theme={theme} />
-          <NotaMetodologica theme={theme} />
+          <div className="space-y-4">
+            <TabelaPatrimonial data={fullData} theme={theme} />
+            <TabelaRendaDisponivel plano={plano} cenario={cenario} theme={theme} />
+          </div>
+          <div className="space-y-4">
+            <PremissasTable theme={theme} />
+            <FotografiaPatrimonial theme={theme} />
+            <NotaMetodologica theme={theme} />
+          </div>
         </SectionCarousel>
       </main>
     </div>
