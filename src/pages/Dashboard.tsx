@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { LogOut } from 'lucide-react'
 import CountdownCard from '../components/CountdownCard'
-import PatrimonioChart from '../components/PatrimonioChart'
+import PatrimonioChart, { type HoverPoint } from '../components/PatrimonioChart'
 import ValorizacaoChart from '../components/ValorizacaoChart'
 import LciChart from '../components/LciChart'
 import ComparativoChart from '../components/ComparativoChart'
@@ -50,13 +50,21 @@ export default function Dashboard() {
   const { data: allCenarios } = useAllCenarios(plano)
   const saldosReais = useSaldosReais()
 
+  const [hoverPoint, setHoverPoint] = useState<HoverPoint | null>(null)
+  const onChartHover = useCallback((p: HoverPoint | null) => setHoverPoint(p), [])
+
   const lastPoint = chartData[chartData.length - 1]
 
-  const patLiquido = lastPoint
+  const defaultLiq = lastPoint
     ? (lastPoint.ibkr + lastPoint.savings + lastPoint.pension + lastPoint.cdi +
        lastPoint.lci + lastPoint.fundo_sar + lastPoint.cripto + lastPoint.ouro) * 1e6
     : 0
-  const patIliquido = lastPoint ? (lastPoint.im1 + lastPoint.im2) * 1e6 : 0
+  const defaultIliq = lastPoint ? (lastPoint.im1 + lastPoint.im2) * 1e6 : 0
+
+  const patLiquido = hoverPoint ? hoverPoint.liquido : defaultLiq
+  const patIliquido = hoverPoint ? hoverPoint.iliquido : defaultIliq
+  const patTotal = patLiquido + patIliquido
+  const refLabel = hoverPoint ? hoverPoint.mes : 'Dez/2032'
 
   const cenariosDisponiveis = plano === 'terceira_margem'
     ? CENARIOS.filter((c) => c.key !== 'ultra')
@@ -118,13 +126,17 @@ export default function Dashboard() {
 
             <div className="flex-1" />
 
-            <div className="rounded-lg px-3 py-1.5 min-w-[130px] text-center" style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}>
-              <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Líquido</div>
-              <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>{loading ? '...' : fmt(patLiquido)}</div>
+            <div className="rounded-lg px-3 py-1.5 min-w-[120px] text-center" style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}>
+              <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Total {refLabel}</div>
+              <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>{loading ? '...' : fmt(patTotal)}</div>
             </div>
-            <div className="rounded-lg px-3 py-1.5 min-w-[130px] text-center" style={{ backgroundColor: theme.accentBg, border: `1px solid ${theme.accentBorder}` }}>
+            <div className="rounded-lg px-3 py-1.5 min-w-[120px] text-center" style={{ backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${theme.surfaceBorder}` }}>
+              <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Líquido</div>
+              <div className="text-sm font-bold tabular-nums" style={{ color: theme.text }}>{loading ? '...' : fmt(patLiquido)}</div>
+            </div>
+            <div className="rounded-lg px-3 py-1.5 min-w-[120px] text-center" style={{ backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', border: `1px solid ${theme.surfaceBorder}` }}>
               <div className="text-[10px] font-medium uppercase tracking-wide" style={{ color: theme.textFaint }}>Ilíquido</div>
-              <div className="text-sm font-bold tabular-nums" style={{ color: theme.accent }}>{loading ? '...' : fmt(patIliquido)}</div>
+              <div className="text-sm font-bold tabular-nums" style={{ color: theme.text }}>{loading ? '...' : fmt(patIliquido)}</div>
             </div>
           </div>
         </div>
@@ -154,6 +166,7 @@ export default function Dashboard() {
             saldosReais={saldosReais}
             titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`}
             theme={theme}
+            onHover={onChartHover}
           />
           <LciChart data={allCenarios} cenarioAtivo={cenario} theme={theme} />
           <ValorizacaoChart baseData={chartData} plano={plano} theme={theme} />

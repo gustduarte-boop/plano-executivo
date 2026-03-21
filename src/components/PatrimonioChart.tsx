@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import {
   Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, Line, ComposedChart, Scatter
@@ -19,14 +20,35 @@ const LABELS: Record<string, string> = {
 
 const STACK_ORDER = ['cdi', 'lci', 'cripto', 'im2', 'im1', 'fundo_sar', 'pension', 'savings', 'ibkr']
 
+export interface HoverPoint {
+  mes: string
+  liquido: number
+  iliquido: number
+  total: number
+}
+
 interface Props {
   data: ChartDataPoint[]
   saldosReais: SaldoReal[]
   titulo: string
   theme: Theme
+  onHover?: (point: HoverPoint | null) => void
 }
 
-export default function PatrimonioChart({ data, saldosReais, titulo, theme }: Props) {
+export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHover }: Props) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleMouseMove = useCallback((state: any) => {
+    if (!onHover || !state?.activePayload?.length) return
+    const d = state.activePayload[0].payload as ChartDataPoint
+    const liq = (d.ibkr + d.savings + d.pension + d.cdi + d.lci + d.fundo_sar + d.cripto + d.ouro) * 1e6
+    const iliq = (d.im1 + d.im2) * 1e6
+    onHover({ mes: d.mes, liquido: liq, iliquido: iliq, total: (liq + iliq) })
+  }, [onHover])
+
+  const handleMouseLeave = useCallback(() => {
+    onHover?.(null)
+  }, [onHover])
+
   if (!data.length) {
     return (
       <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>
@@ -36,10 +58,13 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme }: Pr
     )
   }
 
+  // Merge saldos reais — usar undefined em vez de null para que Recharts ignore
   const merged = data.map((d) => {
     const real = saldosReais.find((s) => s.data_ref === d.data_ref)
-    return { ...d, real: real?.total ?? null }
+    return { ...d, real: real ? real.total : undefined }
   })
+
+  const hasReal = merged.some((d) => d.real !== undefined)
 
   const tooltipBg = theme.isDark ? '#1e293b' : '#ffffff'
   const tooltipBorder = theme.isDark ? '#334155' : '#e2e8f0'
@@ -48,21 +73,33 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme }: Pr
     <div className="rounded-xl p-5" style={{ backgroundColor: theme.surface, border: `1px solid ${theme.surfaceBorder}` }}>
       <h2 className="text-sm font-medium mb-4" style={{ color: theme.textMuted }}>{titulo}</h2>
       <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart data={merged} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <ComposedChart
+          data={merged}
+          margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke={theme.gridStroke} />
           <XAxis dataKey="mes" tick={{ fontSize: 9, fill: theme.textFaint }} interval={2} angle={-40} textAnchor="end" height={55} />
           <YAxis tick={{ fontSize: 10, fill: theme.textFaint }} tickFormatter={(v) => `R$${v.toFixed(1)}M`} />
           <Tooltip
             contentStyle={{ backgroundColor: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: 8, fontSize: 12 }}
             labelStyle={{ color: theme.text }}
-            formatter={(value) => [`R$ ${(Number(value) * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, undefined]}
+            formatter={(value, name) => {
+              const v = Number(value)
+              if (!isFinite(v)) return [null, null]
+              return [`R$ ${(v * 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, name]
+            }}
+            itemSorter={() => 0}
           />
           <Legend wrapperStyle={{ fontSize: 11, color: theme.textMuted }} />
           {STACK_ORDER.map((key) => (
             <Bar key={key} dataKey={key} name={LABELS[key]} stackId="pat" fill={COLORS[key]} fillOpacity={0.85} />
           ))}
           <Line type="monotone" dataKey="total" name="Total" stroke={theme.text} strokeWidth={2} dot={{ r: 2, fill: theme.text }} />
-          <Scatter dataKey="real" name="Real" fill="#22d3ee" shape="diamond" legendType="diamond" />
+          {hasReal && (
+            <Scatter dataKey="real" name="Real" fill="#22d3ee" shape="diamond" legendType="diamond" />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
