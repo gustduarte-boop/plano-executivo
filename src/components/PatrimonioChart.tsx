@@ -99,7 +99,7 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     const idx = state?.activeTooltipIndex
     if (idx == null || idx === lastIndexRef.current) return
     lastIndexRef.current = idx
-    const d = merged[idx] as ChartDataPoint
+    const d = merged[idx] as unknown as ChartDataPoint
     if (!d) return
     const liq = (d.ibkr + d.savings + d.pension + d.cdi + d.lci + d.fundo_sar + d.cripto + (d.ouro || 0)) * 1e6
     const iliq = (d.im1 + d.im2) * 1e6

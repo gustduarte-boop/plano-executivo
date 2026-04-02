@@ -333,7 +333,15 @@ def extract_tm(ns):
                 cripto = ns.get('cripto_at', cripto_at_fallback)(m)
                 im1 = ns.get('im1_mkt', lambda m: 0)(m)
                 im2 = ns.get('im2_mkt', lambda m: 0)(m)
-                rim = ns.get('renda_total_im', lambda m: 0)(m)
+                # TM's renda_total_im(m, sc_key) needs scenario key
+                renda_fn = ns.get('renda_total_im')
+                if renda_fn:
+                    try:
+                        rim = renda_fn(m)
+                    except TypeError:
+                        rim = renda_fn(m, sim_key)
+                else:
+                    rim = 0
                 ouro_val = ibkr_val * 0.08 / 0.92 if ibkr_val > 0 else 0
                 pat_total = ibkr_val + sav + pen + cdi_val + lci_val + fundo_val + cripto + im1 + im2
 
@@ -400,6 +408,15 @@ def extract_extras(ns, plano):
     mc_ibkr = ns.get('mc_ibkr')
     mc_total = ns.get('mc_total')
     mc_renda = ns.get('mc_renda')
+
+    # TM uses mc_pat (patrimonio total in M) instead of mc_total,
+    # and mc_rim (renda in k/mes) instead of mc_renda.
+    # Fall back to TM variable names if Master names are missing.
+    if mc_total is None:
+        mc_total = ns.get('mc_pat')  # TM: mc_pat ≡ mc_total (both in millions)
+    if mc_renda is None:
+        mc_renda = ns.get('mc_rim')  # TM: mc_rim ≡ mc_renda (both in k/mes)
+
     if mc_ibkr is not None and len(mc_ibkr) > 0:
         print(f"  Monte Carlo: {len(mc_ibkr)} simulações")
         def percentiles(arr):
@@ -584,13 +601,26 @@ def extract_extras(ns, plano):
             print(f"  Cisne Negro: função não encontrada")
 
     # ── FLUXO MENSAL ──
-    salary_scenarios = ns.get('SALARY_SCENARIOS', {})
+    # TM defines SALARY_SCENARIOS_TM instead of SALARY_SCENARIOS.
+    # Try SALARY_SCENARIOS first, fall back to SALARY_SCENARIOS_TM.
+    salary_scenarios = ns.get('SALARY_SCENARIOS') or ns.get('SALARY_SCENARIOS_TM', {})
+    # TM uses custo_total_tm (which already includes plano_saude_tm) instead of custo_vida.
+    # If custo_total_tm is used, skip adding plano_saude and MANUT separately.
     custo_vida_fn = ns.get('custo_vida')
+    custo_includes_extras = False
+    if not custo_vida_fn:
+        custo_vida_fn = ns.get('custo_total_tm') or ns.get('custo_vida_tm')
+        custo_includes_extras = True  # TM custo_total_tm already includes plano_saude
     plano_saude_fn = ns.get('plano_saude') or ns.get('plano_saude_sprint')
     renda_total_fn = ns.get('renda_total_im')
     MANUT = ns.get('MANUT_MES', 2000)
 
+    # TM has 3 scenarios (pessim, base, otim); Master/Sprint have 4 (ultra, pessim, inter, otim).
+    # Build scenario_map dynamically based on available salary_scenarios and sims.
     scenario_map = {'ultra': 'ultra', 'pessim': 'pessim', 'inter': 'base', 'otim': 'otim'}
+    # Also include TM-style keys where sim_key == cenario_db (e.g., 'base': 'base')
+    if 'base' in salary_scenarios and 'inter' not in salary_scenarios:
+        scenario_map['base'] = 'base'
     sims = ns.get('sims', {})
 
     if custo_vida_fn and sims:
@@ -599,7 +629,8 @@ def extract_extras(ns, plano):
             if sim_key not in salary_scenarios and sim_key not in sims:
                 continue
             sal_val = salary_scenarios.get(sim_key, {}).get('sal', 0)
-            SALARY_M = ns.get('SALARY_M', 47)
+            # TM uses SALARY_M_TM instead of SALARY_M
+            SALARY_M = ns.get('SALARY_M') or ns.get('SALARY_M_TM', 47)
             meses = []
             for m in range(N_MONTHS):
                 custo = 0
@@ -608,16 +639,24 @@ def extract_extras(ns, plano):
                 if m >= TRANSITION_M:
                     m_ret = m - TRANSITION_M
                     custo = float(custo_vida_fn(m))
-                    if plano_saude_fn:
-                        try:
-                            custo += float(plano_saude_fn(m_ret))
-                        except Exception:
-                            pass
-                    custo += MANUT
+                    # TM's custo_total_tm already includes plano_saude; skip extras
+                    if not custo_includes_extras:
+                        if plano_saude_fn:
+                            try:
+                                custo += float(plano_saude_fn(m_ret))
+                            except Exception:
+                                pass
+                        custo += MANUT
                     sal = sal_val if m >= SALARY_M else 0
                 if renda_total_fn:
                     try:
                         rim = float(renda_total_fn(m))
+                    except TypeError:
+                        # TM's renda_total_im(m, sc_key) needs scenario key
+                        try:
+                            rim = float(renda_total_fn(m, sim_key))
+                        except Exception:
+                            rim = 0
                     except Exception:
                         rim = 0
                 excedente = rim + sal - custo if custo > 0 else 0

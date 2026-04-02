@@ -1,5 +1,3 @@
-const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || ''
-
 const SYSTEM_PROMPT = `Você é um assistente financeiro que analisa prints/screenshots de extratos bancários e corretoras.
 
 PASSO 1 — IDENTIFICAÇÃO VISUAL DA INSTITUIÇÃO:
@@ -75,16 +73,6 @@ export interface AnalysisResult {
 export async function analyzeDocuments(files: File[]): Promise<AnalysisResult> {
   console.log('[AI] Starting analysis for', files.length, 'file(s)')
 
-  if (!ANTHROPIC_KEY) {
-    console.log('[AI] No API key configured')
-    return {
-      fonte: 'desconhecido', campo: 'desconhecido', valores: [],
-      valor_principal: 0, moeda: 'BRL', data_ref: null, confianca: 'baixa',
-      observacao: 'API key não configurada. Preencha manualmente.',
-      error: 'no_api_key',
-    }
-  }
-
   // Build content array with all images
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const content: any[] = []
@@ -103,16 +91,11 @@ export async function analyzeDocuments(files: File[]): Promise<AnalysisResult> {
       : 'Analise esta imagem e extraia as informações financeiras.',
   })
 
-  console.log('[AI] Calling Anthropic API with', content.length - 1, 'image(s)...')
+  console.log('[AI] Calling /api/analyze with', content.length - 1, 'image(s)...')
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('/api/analyze', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2048,
