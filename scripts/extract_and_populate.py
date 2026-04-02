@@ -482,80 +482,138 @@ def extract_extras(ns, plano):
     points = list(range(0, N_MONTHS, 4))
     stress_data = []
 
-    for sp in stress_scenarios:
-        try:
-            bal_ibkr = 10594 * sp['cambio'] * (1 - OURO_FRAC_ST)
-            bal_ouro = 10594 * sp['cambio'] * OURO_FRAC_ST
-            cdi = 0
-            tots = []
+    # TM uses simular_tm() which encapsulates the full simulation logic.
+    # Instead of reconstructing from component functions, run simular_tm with
+    # different ibkr_rate and salary overrides for each stress scenario.
+    simular_tm_fn = ns.get('simular_tm')
+    pat_com_val_fn = ns.get('pat_com_val')
 
-            for m in range(N_MONTHS):
-                # Renda Im.1
-                rim1 = renda_liq_im1_fn(m) if renda_liq_im1_fn else 0
-                # Renda Im.2 com parâmetros de stress
-                rim2 = 0
-                if renda_im2_param_fn:
-                    delay = sp['delay']
-                    if delay > 0:
-                        rim2 = renda_im2_param_fn(m - delay, sp['im2_modo'], sp['occ']) if m >= IM2_START_ST + delay else 0
+    if simular_tm_fn and plano == 'terceira_margem':
+        # TM stress: use simular_tm with parameter overrides
+        tm_stress_scenarios = [
+            {'name': 'Base (Plano Exec.)', 'sc_key': 'base', 'ibkr_rate': None, 'sal': None,
+             'val': 0.10, 'color': '#185FA5', 'style': 'solid'},
+            {'name': 'Stress Moderado', 'sc_key': 'base', 'ibkr_rate': 0.06, 'sal': 12000,
+             'val': 0.10, 'color': '#EF9F27', 'style': 'solid'},
+            {'name': 'Stress Severo', 'sc_key': 'pessim', 'ibkr_rate': 0.04, 'sal': 0,
+             'val': 0.07, 'color': '#E24B4A', 'style': 'solid'},
+            {'name': 'Ultra Pessimista', 'sc_key': 'pessim', 'ibkr_rate': 0.04, 'sal': 0,
+             'val': 0.05, 'color': '#7F1D1D', 'style': 'dashed'},
+            {'name': 'Otimista Composto', 'sc_key': 'otim', 'ibkr_rate': 0.10, 'sal': 16000,
+             'val': 0.15, 'color': '#14532D', 'style': 'dashed'},
+        ]
+        for sp in tm_stress_scenarios:
+            try:
+                sim = simular_tm_fn(sp['sc_key'], ibkr_rate_ov=sp['ibkr_rate'], sal_override=sp['sal'])
+                tots = []
+                for m in points:
+                    if pat_com_val_fn:
+                        # Use pat_com_val for consistent valuation with custom val rate
+                        # But pat_com_val reads from global sims dict, so use sim directly
+                        pass
+                    # Compute total with custom valorization rate
+                    s = sim[m]
+                    val_rate = sp['val']
+                    im1_start = ns.get('IM1_START', 8)
+                    im2_start = ns.get('IM2_START', 21)
+                    im1_val_0 = ns.get('IM1_VAL_0', 350_000)
+                    im2_terreno = ns.get('IM2_TERRENO', 154_000)
+                    capex_im2 = ns.get('CAPEX_IM2', 560_000)
+                    fator_capex = ns.get('FATOR_CAPEX', {}).get(sp['sc_key'], 1.5)
+                    spe = ns.get('SPE', 0.66)
+
+                    if m >= im1_start:
+                        im1v = im1_val_0 * ((1 + val_rate/12) ** (m - im1_start))
                     else:
-                        rim2 = renda_im2_param_fn(m, sp['im2_modo'], sp['occ'])
-                rim = rim1 + rim2
-
-                if m < MIGRATE_M:
-                    bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12) + 2800 * sp['cambio'] * (1 - OURO_FRAC_ST)
-                    bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12) + 2800 * sp['cambio'] * OURO_FRAC_ST
-                    cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12) + (rim1 if m >= IM1_START_ST else 0)
-                elif m == MIGRATE_M:
-                    sav_pen = (savings_raw_fn(m) + pension_raw_fn(m)) * (sp['cambio'] / CAMBIO) if savings_raw_fn else 0
-                    bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12) + 2800 * sp['cambio'] * (1 - OURO_FRAC_ST) + sav_pen * (1 - OURO_FRAC_ST)
-                    bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12) + 2800 * sp['cambio'] * OURO_FRAC_ST + sav_pen * OURO_FRAC_ST
-                    cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12) + rim
-                elif m < TRANSITION_M:
-                    bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12)
-                    bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12)
-                    cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12)
-                else:
-                    m_ret = m - TRANSITION_M
-                    custo = custo_vida_fn(m) if custo_vida_fn else 14000
-                    if plano_saude_fn:
-                        try:
-                            custo += plano_saude_fn(m_ret)
-                        except Exception:
-                            pass
-                    custo += MANUT_ST
-                    sal = sp['sal'] if m >= SALARY_M_ST else 0
-                    rec = rim + sal
-                    cdi = cdi * (1 + SELIC_LIQ_ST / 12)
-                    if rec >= custo:
-                        cdi += rec - custo
+                        im1v = 100_000 * ((1 + val_rate/12) ** m)
+                    if m >= im2_start:
+                        im2v = (im2_terreno + capex_im2 * fator_capex * spe) * ((1 + val_rate/12) ** (m - im2_start))
                     else:
-                        d = custo - rec
-                        cdi = max(0, cdi - d)
-                    bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12)
-                    bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12)
+                        im2v = im2_terreno
 
-                if m in points:
-                    sav = savings_raw_fn(m) * (sp['cambio'] / CAMBIO) / 1e6 if (savings_raw_fn and m < MIGRATE_M) else 0
-                    pen = pension_raw_fn(m) * (sp['cambio'] / CAMBIO) / 1e6 if (pension_raw_fn and m < MIGRATE_M) else 0
-                    try:
-                        im1v = im1_mkt_param_fn(m, sp['fcap'], sp['val']) / 1e6
-                    except TypeError:
-                        im1v = im1_mkt_param_fn(m, sp['val']) / 1e6
-                    try:
-                        im2v = im2_mkt_param_fn(m, sp['fcap'], sp['val']) / 1e6
-                    except TypeError:
-                        im2v = im2_mkt_param_fn(m, sp['val']) / 1e6
-                    cr = cripto_fn(m) / 1e6
-                    tot = (bal_ibkr + bal_ouro) / 1e6 + sav + pen + im1v + im2v + cr + cdi / 1e6
+                    tot = (s['ibkr'] + s['cdi'] + im1v + im2v) / 1e6
                     tots.append(round(float(tot), 3))
 
-            sp_out = {k: sp[k] for k in ['name', 'color', 'style']}
-            sp_out['data'] = tots
-            sp_out['points'] = points
-            stress_data.append(sp_out)
-        except Exception as e:
-            print(f"    Stress '{sp['name']}': erro — {e}")
+                sp_out = {'name': sp['name'], 'color': sp['color'], 'style': sp['style']}
+                sp_out['data'] = tots
+                sp_out['points'] = points
+                stress_data.append(sp_out)
+            except Exception as e:
+                print(f"    Stress '{sp['name']}': erro — {e}")
+    else:
+        # Master/Sprint: reconstruct stress from component functions
+        for sp in stress_scenarios:
+            try:
+                bal_ibkr = 10594 * sp['cambio'] * (1 - OURO_FRAC_ST)
+                bal_ouro = 10594 * sp['cambio'] * OURO_FRAC_ST
+                cdi = 0
+                tots = []
+
+                for m in range(N_MONTHS):
+                    rim1 = renda_liq_im1_fn(m) if renda_liq_im1_fn else 0
+                    rim2 = 0
+                    if renda_im2_param_fn:
+                        delay = sp['delay']
+                        if delay > 0:
+                            rim2 = renda_im2_param_fn(m - delay, sp['im2_modo'], sp['occ']) if m >= IM2_START_ST + delay else 0
+                        else:
+                            rim2 = renda_im2_param_fn(m, sp['im2_modo'], sp['occ'])
+                    rim = rim1 + rim2
+
+                    if m < MIGRATE_M:
+                        bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12) + 2800 * sp['cambio'] * (1 - OURO_FRAC_ST)
+                        bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12) + 2800 * sp['cambio'] * OURO_FRAC_ST
+                        cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12) + (rim1 if m >= IM1_START_ST else 0)
+                    elif m == MIGRATE_M:
+                        sav_pen = (savings_raw_fn(m) + pension_raw_fn(m)) * (sp['cambio'] / CAMBIO) if savings_raw_fn else 0
+                        bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12) + 2800 * sp['cambio'] * (1 - OURO_FRAC_ST) + sav_pen * (1 - OURO_FRAC_ST)
+                        bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12) + 2800 * sp['cambio'] * OURO_FRAC_ST + sav_pen * OURO_FRAC_ST
+                        cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12) + rim
+                    elif m < TRANSITION_M:
+                        bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12)
+                        bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12)
+                        cdi = cdi * (1 + CDI_ST * CDI_LIQ_ST / 12)
+                    else:
+                        m_ret = m - TRANSITION_M
+                        custo = custo_vida_fn(m) if custo_vida_fn else 14000
+                        if plano_saude_fn:
+                            try:
+                                custo += plano_saude_fn(m_ret)
+                            except Exception:
+                                pass
+                        custo += MANUT_ST
+                        sal = sp['sal'] if m >= SALARY_M_ST else 0
+                        rec = rim + sal
+                        cdi = cdi * (1 + SELIC_LIQ_ST / 12)
+                        if rec >= custo:
+                            cdi += rec - custo
+                        else:
+                            d = custo - rec
+                            cdi = max(0, cdi - d)
+                        bal_ibkr = bal_ibkr * (1 + sp['ibkr_r'] / 12)
+                        bal_ouro = bal_ouro * (1 + OURO_RATE_ST / 12)
+
+                    if m in points:
+                        sav = savings_raw_fn(m) * (sp['cambio'] / CAMBIO) / 1e6 if (savings_raw_fn and m < MIGRATE_M) else 0
+                        pen = pension_raw_fn(m) * (sp['cambio'] / CAMBIO) / 1e6 if (pension_raw_fn and m < MIGRATE_M) else 0
+                        try:
+                            im1v = im1_mkt_param_fn(m, sp['fcap'], sp['val']) / 1e6
+                        except TypeError:
+                            im1v = im1_mkt_param_fn(m, sp['val']) / 1e6
+                        try:
+                            im2v = im2_mkt_param_fn(m, sp['fcap'], sp['val']) / 1e6
+                        except TypeError:
+                            im2v = im2_mkt_param_fn(m, sp['val']) / 1e6
+                        cr = cripto_fn(m) / 1e6
+                        tot = (bal_ibkr + bal_ouro) / 1e6 + sav + pen + im1v + im2v + cr + cdi / 1e6
+                        tots.append(round(float(tot), 3))
+
+                sp_out = {k: sp[k] for k in ['name', 'color', 'style']}
+                sp_out['data'] = tots
+                sp_out['points'] = points
+                stress_data.append(sp_out)
+            except Exception as e:
+                print(f"    Stress '{sp['name']}': erro — {e}")
 
     if stress_data:
         extras.append({'plano': plano, 'tipo': 'stress_test', 'dados': {'scenarios': stress_data}})
