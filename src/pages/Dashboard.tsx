@@ -22,6 +22,8 @@ import CisneNegroChart from '../components/CisneNegroChart'
 import CenariosSalariaisChart from '../components/CenariosSalariaisChart'
 import SectionCarousel from '../components/SectionCarousel'
 import EntradaDados from '../components/EntradaDados'
+import PortfolioAtivos from '../components/PortfolioAtivos'
+import CapexDashboard from '../components/CapexDashboard'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { usePatrimonio, useAllCenarios, useSaldosReais, usePatrimonioFull } from '../hooks/usePatrimonio'
@@ -59,13 +61,14 @@ export default function Dashboard() {
   const [cenario, setCenario] = useState<Cenario>('base')
   const theme = useTheme(plano)
   const [showEntrada, setShowEntrada] = useState(false)
+  const [saldoRefreshKey, setSaldoRefreshKey] = useState(0)
   const [hoverPoint, setHoverPoint] = useState<HoverPoint | null>(null)
   const onChartHover = useCallback((p: HoverPoint | null) => setHoverPoint(p), [])
 
   const { data: chartData, loading } = usePatrimonio(plano, cenario)
   const { data: fullData } = usePatrimonioFull(plano, cenario)
   const { data: allCenarios } = useAllCenarios(plano)
-  const saldosReais = useSaldosReais()
+  const saldosReais = useSaldosReais(saldoRefreshKey)
 
   const lastPoint = chartData[chartData.length - 1]
   const defaultLiq = lastPoint
@@ -177,8 +180,8 @@ export default function Dashboard() {
         <SectionCarousel
           labels={[
             'Evolução', 'LCI/RF', 'Valorização', 'Comparativo', 'Cobertura',
-            'Imóveis', 'Risco', 'Stress', 'Salariais',
-            'Síntese', 'Detalhado', 'Referência',
+            'Imóveis', 'CAPEX', 'Risco', 'Stress', 'Salariais',
+            'Síntese', 'Detalhado', 'Referência', 'Portfólio',
           ]}
           theme={theme}
         >
@@ -194,6 +197,7 @@ export default function Dashboard() {
             <Im1Benchmark theme={theme} />
             <Im2Maturacao plano={plano} theme={theme} />
           </div>
+          <CapexDashboard theme={theme} />
           <div className="space-y-4">
             <MonteCarloChart plano={plano} theme={theme} />
             <SensibilidadeHeatmap plano={plano} theme={theme} />
@@ -213,10 +217,11 @@ export default function Dashboard() {
             <FotografiaPatrimonial theme={theme} />
             <NotaMetodologica theme={theme} />
           </div>
+          <PortfolioAtivos theme={theme} />
         </SectionCarousel>
       </main>
 
-      {showEntrada && <EntradaDados theme={theme} onClose={() => setShowEntrada(false)} />}
+      {showEntrada && <EntradaDados theme={theme} onClose={(saved) => { setShowEntrada(false); if (saved) setSaldoRefreshKey(k => k + 1) }} />}
     </div>
   )
 }

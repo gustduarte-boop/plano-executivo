@@ -14,7 +14,7 @@ PASSO 2 — ATIVOS CONHECIDOS POR INSTITUIÇÃO:
 - BANCO DO BRASIL: "Ações Vale I" (fundo), "BB LCI" / "Extrato LCI" (renda fixa 83% CDI), "Poupança BB", campos "Saldo atual/Rendimento/Capital/Rentabilidade"
 - NUBANK: "Construir a casa" (caixinha principal CDI), "Caixinha Turbo Ultravioleta", "Meu sonho de consumo", "Reserva de Emergência", "ROXO34" (Nu Holdings BDR), "VALE3" (Vale ação), saldo disponível em conta
 - XP INVESTIMENTOS: "WEGE3" (Weg), "Trend Ouro FIF Multi RL", "XP Long Biased FIC FIM RL", "XP Referenciado", categorias "Renda Variável Brasil", "Alternativos", "Renda Fixa"
-- IBKR: "VTI" (Vanguard Total Stock), "VXUS" (Vanguard Int'l), "BND" (Vanguard Bond), "VNQ" (Vanguard REIT), "GLD" (Gold ETF), ETFs americanos em ARCA/NASDAQ.NMS, valores em USD, P&L em vermelho quando negativo
+- IBKR: "VTI" (Vanguard Total Stock), "VXUS" (Vanguard Int'l), "BND" (Vanguard Bond), "VNQ" (Vanguard REIT), "GLDM"/"GLD"/"IAU" (ETFs de ouro — separar do total IBKR), ETFs americanos em ARCA/NASDAQ.NMS, valores em USD, P&L em vermelho quando negativo
 - BINANCE: "BTC" (Bitcoin), "ETH" (Ethereum), "USDT" (TetherUS), "BNB", "SOL" (Solana), "ADA" (Cardano), "DOT" (Polkadot), "RLC" (iExecRLC), "FET" (Fetch.ai), "ONDO" (Ondo Finance), valores em USDT, PNL em verde/vermelho
 - SABB / SAB: "Commodity Investment Account", conta corrente SAR, "SAB Emirates Credit Card", limite cartão 38.800 SAR
 - KAUST Savings: "Global Employee Savings Plan", "Savings Plan", fundos "Vanguard Emerging Markets Stock Index Fund Inst", "Vanguard U.S. Opportunities Fund Inst", "Vanguard U.S. 500 Stock Index Fund Inst"
@@ -30,6 +30,8 @@ MAPEAMENTO FONTE → CAMPO:
 - Nubank → campo: cdi_brl (moeda: BRL)
 - XP Investimentos → campo: lci_brl (moeda: BRL)
 - IBKR / Interactive Brokers → campo: ibkr_usd (moeda: USD)
+  ATENÇÃO IBKR: Se houver ETFs de ouro (GLDM, GLD, IAU), separe o valor deles usando campos_extras:
+  Ex: ibkr total $13.620 com GLDM $376 → campo: ibkr_usd, valor_principal: 13244 (sem ouro), campos_extras: {"ouro_usd": 376}
 - KAUST Savings → campo: savings_usd (moeda: USD)
 - KAUST Pension → campo: pension_usd (moeda: USD)
 - SABB → campo: fundo_sar_brl (moeda: BRL)
@@ -79,7 +81,11 @@ export async function analyzeDocuments(files: File[]): Promise<AnalysisResult> {
   for (const file of files) {
     console.log('[AI] Processing', file.name, file.size, 'bytes')
     const base64 = await fileToBase64(file)
-    content.push({
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    content.push(isPdf ? {
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: base64 },
+    } : {
       type: 'image',
       source: { type: 'base64', media_type: file.type || 'image/png', data: base64 },
     })

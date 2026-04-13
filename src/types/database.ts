@@ -28,6 +28,25 @@ export interface Cotacao {
   created_at: string
 }
 
+export const CAPEX_CATEGORIAS = [
+  { key: 'fundacao', label: 'Fundação / Estrutura' },
+  { key: 'alvenaria', label: 'Alvenaria / Paredes' },
+  { key: 'telhado', label: 'Telhado / Cobertura' },
+  { key: 'hidraulica', label: 'Hidráulica' },
+  { key: 'eletrica', label: 'Elétrica' },
+  { key: 'acabamento', label: 'Acabamento / Piso / Revestimento' },
+  { key: 'piscina', label: 'Piscina' },
+  { key: 'poco_artesiano', label: 'Poço Artesiano' },
+  { key: 'mao_de_obra', label: 'Mão de obra' },
+  { key: 'material', label: 'Material de construção' },
+  { key: 'transporte', label: 'Transporte / Frete' },
+  { key: 'projeto', label: 'Projeto' },
+  { key: 'acompanhamento', label: 'Acompanhamento obra' },
+  { key: 'outros', label: 'Outros' },
+] as const
+
+export type CapexCategoria = typeof CAPEX_CATEGORIAS[number]['key']
+
 export interface Capex {
   id: string
   user_id: string
@@ -38,7 +57,17 @@ export interface Capex {
   data_prevista: string
   data_realizada: string | null
   status: 'planejado' | 'em_andamento' | 'concluido'
+  categoria: CapexCategoria
   created_at: string
+}
+
+export interface CapexOrcamento {
+  id: string
+  user_id: string
+  imovel: string
+  categoria: CapexCategoria
+  valor_orcado: number
+  updated_at: string
 }
 
 export interface PatrimonioCalculado {

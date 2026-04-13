@@ -3,16 +3,14 @@ import { X } from 'lucide-react'
 import type { Theme } from '../hooks/useTheme'
 import UploadZone from './UploadZone'
 import SaldoForm from './SaldoForm'
-import CapexForm from './CapexForm'
 import { analyzeDocuments, type AnalysisResult } from '../lib/analyzeDocument'
 
 interface Props {
   theme: Theme
-  onClose: () => void
+  onClose: (saved?: boolean) => void
 }
 
 export default function EntradaDados({ theme, onClose }: Props) {
-  const [tab, setTab] = useState<'saldo' | 'capex'>('saldo')
   const [analyzing, setAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [previews, setPreviews] = useState<string[]>([])
@@ -24,8 +22,7 @@ export default function EntradaDados({ theme, onClose }: Props) {
     try {
       const result = await analyzeDocuments(files)
       setAnalysis(result)
-      if (result.campo === 'capex') setTab('capex')
-      else setTab('saldo')
+      // capex entries are now handled in CapexDashboard
     } catch (e) {
       setAnalysis({
         fonte: 'erro', campo: 'desconhecido', valores: [], valor_principal: 0,
@@ -35,11 +32,6 @@ export default function EntradaDados({ theme, onClose }: Props) {
     }
     setAnalyzing(false)
   }
-
-  const tabs = [
-    { key: 'saldo' as const, label: 'Saldo Mensal' },
-    { key: 'capex' as const, label: 'CAPEX Obra' },
-  ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4"
@@ -51,7 +43,7 @@ export default function EntradaDados({ theme, onClose }: Props) {
         <div className="flex items-center justify-between px-5 py-3 sticky top-0 z-10"
           style={{ backgroundColor: theme.surface, borderBottom: `1px solid ${theme.surfaceBorder}` }}>
           <h2 className="text-sm font-bold" style={{ color: theme.text }}>Entrada de Dados</h2>
-          <button onClick={onClose} className="p-1 rounded" style={{ color: theme.textFaint }}><X size={18} /></button>
+          <button onClick={() => onClose()} className="p-1 rounded" style={{ color: theme.textFaint }}><X size={18} /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -104,24 +96,8 @@ export default function EntradaDados({ theme, onClose }: Props) {
             </div>
           )}
 
-          {/* Tabs */}
-          <div className="flex gap-0.5 rounded-lg p-0.5" style={{ backgroundColor: theme.isDark ? theme.bgAlt : '#f1f5f9', border: `1px solid ${theme.surfaceBorder}` }}>
-            {tabs.map((t) => (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                className="flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-                style={{
-                  backgroundColor: tab === t.key ? theme.accent : 'transparent',
-                  color: tab === t.key ? theme.textInverse : theme.textMuted,
-                }}>{t.label}</button>
-            ))}
-          </div>
-
           {/* Form */}
-          {tab === 'saldo' ? (
-            <SaldoForm theme={theme} analysis={analysis} onSaved={onClose} />
-          ) : (
-            <CapexForm theme={theme} analysis={analysis} onSaved={onClose} />
-          )}
+          <SaldoForm theme={theme} analysis={analysis} onSaved={() => onClose(true)} />
         </div>
       </div>
     </div>

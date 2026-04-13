@@ -19,7 +19,7 @@ const LABELS: Record<string, string> = {
   pension: 'Pension', savings: 'Savings', ibkr: 'IBKR+Ouro',
 }
 
-const STACK_ORDER = ['cdi', 'lci', 'cripto', 'im2', 'im1', 'fundo_sar', 'pension', 'savings', 'ibkr']
+const STACK_ORDER = ['im2', 'im1', 'ibkr', 'cdi', 'lci', 'cripto', 'fundo_sar', 'pension', 'savings']
 
 export interface HoverPoint {
   mes: string
@@ -74,15 +74,15 @@ export default function PatrimonioChart({ data, saldosReais, titulo, theme, onHo
     const point: Record<string, unknown> = { ...d }
     if (hasMatch && closest && showReal) {
       let cum = 0
+      cum += closest.im2;       point.rc_im2 = cum
+      cum += closest.im1;       point.rc_im1 = cum
+      cum += closest.ibkr;      point.rc_ibkr = cum
       cum += closest.cdi;       point.rc_cdi = cum
       cum += closest.lci;       point.rc_lci = cum
       cum += closest.cripto;    point.rc_cripto = cum
-      cum += closest.im2;       point.rc_im2 = cum
-      cum += closest.im1;       point.rc_im1 = cum
       cum += closest.fundo_sar; point.rc_fundo_sar = cum
       cum += closest.pension;   point.rc_pension = cum
       cum += closest.savings;   point.rc_savings = cum
-      cum += closest.ibkr;      point.rc_ibkr = cum
       point.real_total = closest.total
     }
     return point

@@ -97,7 +97,7 @@ export function usePatrimonioFull(plano: Plano, cenario: Cenario) {
   return { data, loading }
 }
 
-export function useSaldosReais() {
+export function useSaldosReais(refreshKey = 0) {
   const [data, setData] = useState<SaldoReal[]>([])
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export function useSaldosReais() {
           return { mes: dataRefToLabel(r.data_ref), data_ref: r.data_ref, ibkr, savings, pension, cdi, lci, fundo_sar, cripto, ouro, im1, im2, total }
         }))
       })
-  }, [])
+  }, [refreshKey])
 
   return data
 }

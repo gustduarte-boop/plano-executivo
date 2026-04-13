@@ -99,13 +99,29 @@ export default function SaldoForm({ theme, analysis, onSaved }: Props) {
       }
 
       const newVals: Record<string, string> = {}
-      // Fill from campos_extras if available (e.g. savings + pension together)
+
+      // IBKR: split gold ETFs (GLDM, GLD, IAU) out of ibkr_usd → ouro_usd
+      if (analysis.campo === 'ibkr_usd' && analysis.valores?.length) {
+        const GOLD_TICKERS = ['GLDM', 'GLD', 'IAU', 'SGOL', 'AAAU']
+        const goldTotal = analysis.valores
+          .filter(v => GOLD_TICKERS.some(t => v.descricao.toUpperCase().includes(t)))
+          .reduce((sum, v) => sum + v.valor, 0)
+        if (goldTotal > 0) {
+          newVals['ibkr_usd'] = String(Math.round((analysis.valor_principal - goldTotal) * 100) / 100)
+          newVals['ouro_usd'] = String(Math.round(goldTotal * 100) / 100)
+        } else {
+          newVals['ibkr_usd'] = String(analysis.valor_principal)
+        }
+      } else if (analysis.campo !== 'kaust_ambos') {
+        // Always fill the main campo with valor_principal
+        newVals[analysis.campo] = String(analysis.valor_principal)
+      }
+
+      // Also fill any campos_extras (e.g. savings+pension juntos)
       if (analysis.campos_extras) {
         for (const [k, v] of Object.entries(analysis.campos_extras)) {
           newVals[k] = String(v)
         }
-      } else {
-        newVals[analysis.campo] = String(analysis.valor_principal)
       }
       setValues(prev => ({ ...prev, ...newVals }))
     }
@@ -133,18 +149,33 @@ export default function SaldoForm({ theme, analysis, onSaved }: Props) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setMsg('Não autenticado'); setSaving(false); return }
 
+    // Fetch existing row to merge (avoid zeroing other institutions)
+    const { data: existing } = await supabase
+      .from('saldos')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('data_ref', dataRef)
+      .maybeSingle()
+
+    const allKeys = ['ibkr_usd','savings_usd','pension_usd','cdi_brl','lci_brl',
+      'fundo_sar_brl','cripto_usd','ouro_usd','im1_valor_brl','im2_valor_brl','cambio_usd_brl']
+
     const row: Record<string, unknown> = {
       user_id: user.id,
       data_ref: dataRef,
-      notas: notas || null,
+      notas: notas || (existing?.notas ?? null),
     }
 
-    // Set all possible fields, defaulting to 0
-    const allKeys = ['ibkr_usd','savings_usd','pension_usd','cdi_brl','lci_brl',
-      'fundo_sar_brl','cripto_usd','ouro_usd','im1_valor_brl','im2_valor_brl','cambio_usd_brl']
+    // Merge: use form value if filled, else keep existing DB value, else default
     for (const k of allKeys) {
       const v = values[k]
-      row[k] = v ? parseFloat(v) : (k === 'cambio_usd_brl' ? 5.80 : 0)
+      if (v && parseFloat(v) !== 0) {
+        row[k] = parseFloat(v)
+      } else if (existing && existing[k] != null) {
+        row[k] = existing[k]
+      } else {
+        row[k] = k === 'cambio_usd_brl' ? 5.80 : 0
+      }
     }
 
     const { error } = await supabase
@@ -154,6 +185,20 @@ export default function SaldoForm({ theme, analysis, onSaved }: Props) {
     if (error) {
       setMsg(`Erro: ${error.message}`)
     } else {
+      // Save individual assets if AI detected them
+      if (analysis && !analysis.error && analysis.valores?.length) {
+        const positions = analysis.valores.map((v) => ({
+          user_id: user.id,
+          instituicao: analysis.fonte,
+          ativo: v.descricao,
+          valor: v.valor,
+          moeda: v.moeda || analysis.moeda,
+          data_ref: dataRef,
+        }))
+        await supabase
+          .from('asset_positions')
+          .upsert(positions, { onConflict: 'user_id,instituicao,ativo,data_ref' })
+      }
       setMsg('Salvo!')
       setTimeout(onSaved, 600)
     }
