@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { LogOut, Plus } from 'lucide-react'
 import CountdownCard from '../components/CountdownCard'
-import PatrimonioChart, { type HoverPoint } from '../components/PatrimonioChart'
+import PatrimonioChartNested, { type HoverPoint } from '../components/PatrimonioChartNested'
 import ValorizacaoChart from '../components/ValorizacaoChart'
 import LciChart from '../components/LciChart'
 import ComparativoChart from '../components/ComparativoChart'
@@ -185,7 +185,7 @@ export default function Dashboard() {
           ]}
           theme={theme}
         >
-          <PatrimonioChart data={chartData} saldosReais={saldosReais} titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`} theme={theme} onHover={onChartHover} />
+          <PatrimonioChartNested data={chartData} saldosReais={saldosReais} titulo={`Evolução Patrimonial — ${planoLabel} · ${cenarioLabel}`} theme={theme} onHover={onChartHover} />
           <LciChart data={allCenarios} cenarioAtivo={cenario} theme={theme} />
           <ValorizacaoChart baseData={chartData} plano={plano} theme={theme} />
           <div className="space-y-4">
