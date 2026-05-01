@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, type ReactElement } from 'react'
 import {
   Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, ComposedChart,
@@ -238,7 +238,7 @@ function AnchorWithNested(props: AnchorShapeProps) {
     )
   }
 
-  let nestedBars: JSX.Element | null = null
+  let nestedBars: ReactElement | null = null
   const projCenter = x + width / 2
 
   if (mode === 'single' && payload.lastReal) {
