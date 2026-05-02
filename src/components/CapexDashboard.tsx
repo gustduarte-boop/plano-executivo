@@ -3,6 +3,7 @@ import type { Theme } from '../hooks/useTheme'
 import { useCapex } from '../hooks/useCapex'
 import CapexProgressBar from './capex/CapexProgressBar'
 import CapexCategoryBars from './capex/CapexCategoryBars'
+import CapexPieChart from './capex/CapexPieChart'
 import CapexQuickEntry from './capex/CapexQuickEntry'
 import CapexReceiptUpload from './capex/CapexReceiptUpload'
 import CapexHistory from './capex/CapexHistory'
@@ -63,6 +64,8 @@ export default function CapexDashboard({ theme }: Props) {
       <CapexProgressBar totalBudget={totalBudget} totalSpent={totalSpent} theme={theme} />
 
       <CapexCategoryBars byCategory={byCategory} categorias={categorias} theme={theme} />
+
+      <CapexPieChart byCategory={byCategory} categorias={categorias} theme={theme} />
 
       <CapexReceiptUpload categorias={categorias} onExtracted={handleExtracted} theme={theme} />
 
